@@ -1185,91 +1185,102 @@ function updateTotalScore() {
 
     if (!assignment) return;
 
-    const checkedInputs =
-        document.querySelectorAll(
-            "#evaluationFormContainer .level-card input:checked"
-        );
-
     const totalElement =
         document.getElementById("totalScore");
 
-    if (!checkedInputs.length) {
-        totalElement.textContent = "—";
-        return;
-    }
-
     let totalScore = 0;
     let maxScore = 0;
+    let evaluatedCount = 0;
 
     /*
-       Elk criterium telt even zwaar.
-       De score van een gekozen niveau is de absolute score.
-       
-       Het maximaal haalbare aantal punten per criterium
-       wordt automatisch bepaald door het hoogste niveau
-       van dat criterium.
+       Elk criterium (.parameter) telt even zwaar.
+
+       De behaalde score komt van het geselecteerde niveau.
+       De maximumscore komt van het hoogste niveau binnen
+       dat criterium.
     */
 
-    const criteria =
-        document.querySelectorAll(
-            "#evaluationFormContainer .criterion-card"
-        );
+    document
+        .querySelectorAll(
+            "#evaluationFormContainer .parameter"
+        )
+        .forEach(parameter => {
 
-    criteria.forEach(criterion => {
+            const inputs =
+                parameter.querySelectorAll(
+                    'input[type="radio"]'
+                );
 
-        const inputs =
-            criterion.querySelectorAll(
-                'input[type="radio"]'
-            );
+            if (!inputs.length) return;
 
-        if (!inputs.length) return;
+            let criterionMax = 0;
 
-        // Hoogste beschikbare score binnen dit criterium
-        let criterionMax = 0;
+            inputs.forEach(input => {
 
-        inputs.forEach(input => {
+                const score =
+                    Number(input.dataset.score);
 
-            const score =
-                Number(input.dataset.score);
+                if (!Number.isNaN(score)) {
 
-            if (!Number.isNaN(score)) {
-                criterionMax =
-                    Math.max(criterionMax, score);
+                    criterionMax =
+                        Math.max(
+                            criterionMax,
+                            score
+                        );
+
+                }
+
+            });
+
+            maxScore += criterionMax;
+
+
+            const selected =
+                parameter.querySelector(
+                    'input[type="radio"]:checked'
+                );
+
+            if (selected) {
+
+                const score =
+                    Number(selected.dataset.score);
+
+                if (!Number.isNaN(score)) {
+
+                    totalScore += score;
+                    evaluatedCount++;
+
+                }
+
             }
 
         });
 
-        maxScore += criterionMax;
-
-        // Geselecteerde score binnen dit criterium
-        const selected =
-            criterion.querySelector(
-                'input[type="radio"]:checked'
-            );
-
-        if (selected) {
-
-            const score =
-                Number(selected.dataset.score);
-
-            if (!Number.isNaN(score)) {
-                totalScore += score;
-            }
-
-        }
-
-    });
 
     /*
-       Toon de absolute score als:
-       behaalde punten / maximaal aantal punten
+       Nog geen enkele beoordeling:
+       toon 0 / maximumscore.
+    */
+
+    if (evaluatedCount === 0) {
+
+        totalElement.textContent =
+            `0 / ${maxScore}`;
+
+        return;
+
+    }
+
+
+    /*
+       Absolute eindscore:
+       behaalde punten / maximaal haalbare punten
     */
 
     totalElement.textContent =
         `${totalScore} / ${maxScore}`;
 
 }
-
 function collectFormData() {
 
     const assignment =

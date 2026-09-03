@@ -91,7 +91,9 @@ document.addEventListener(
 
         /*
            Firebase is de primaire databron.
-           We laden eerst de online database.
+
+           We laden NIET eerst Local Storage.
+           Eerst proberen we de online database te laden.
         */
 
         try {
@@ -114,8 +116,8 @@ document.addEventListener(
             );
 
             /*
-               Alleen wanneer Firebase niet bereikbaar is,
-               gebruiken we de lokale gegevens als fallback.
+               Alleen wanneer Firebase echt niet bereikbaar is,
+               gebruiken we Local Storage als fallback.
             */
 
             loadLocalState();
@@ -132,7 +134,6 @@ document.addEventListener(
 
     }
 );
-```
 
 
 /* ============================================================

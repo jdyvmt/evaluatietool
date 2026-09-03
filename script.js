@@ -29,52 +29,18 @@ const db = getFirestore(app);
    EVALUATIETOOL
    Atheneum Brugge
 
-   Werkt:
-   - lokaal via localStorage
-   - online via Supabase
-   - opdrachten bouwen
-   - parameters en niveaus
-   - vrije aantallen niveaus
-   - gelijke weging van parameters
-   - leerlingen/klassen
-   - evaluaties
-   - herkansingen
-   - timer
-   - geschiedenis
-   - PDF leerling
-   - PDF klas
-============================================================ */
-
-
-/* ============================================================
-   SUPABASE CONFIGURATIE
-============================================================
-
-   Vul hieronder je Supabase gegevens in zodra je de database
-   hebt aangemaakt.
-
-   Tot die tijd blijft de app automatisch lokaal werken.
-============================================================ */
-
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
-
-
-/* ============================================================
-   CONSTANTEN
-============================================================ */
+   Database: Firebase Firestore
+   ============================================================ */
 
 const STORAGE_KEY = "atheneum_brugge_evaluatietool_v1";
 
 const ACCENT = "#2a37b1";
 const BG = "#f5f3f5";
 
-let db = null;
-
 
 /* ============================================================
    STATE
-============================================================ */
+   ============================================================ */
 
 let state = {
     assignments: [],
@@ -102,7 +68,7 @@ let filterUnevaluated = false;
 
 /* ============================================================
    INITIALISATIE
-============================================================ */
+   ============================================================ */
 
 document.addEventListener("DOMContentLoaded", async () => {
 
@@ -115,29 +81,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     renderAll();
 
-    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-        await connectSupabase();
-    } else {
-        setConnectionStatus(false);
-    }
-
-});
-
-
-/* ============================================================
-   SUPABASE
-============================================================ */
-
-async function connectSupabase() {
-
     try {
 
-        db = window.supabase.createClient(
-            SUPABASE_URL,
-            SUPABASE_ANON_KEY
-        );
-
-        await loadFromSupabase();
+        await loadFromFirebase();
 
         setConnectionStatus(true);
 
@@ -145,69 +91,103 @@ async function connectSupabase() {
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Firebase kon niet worden geladen:",
+            error
+        );
 
         setConnectionStatus(false);
 
         showToast(
-            "Supabase kon niet worden geladen. Lokale modus actief."
+            "Database kon niet worden geladen. Lokale gegevens worden gebruikt."
         );
 
     }
 
-}
+});
 
 
-async function loadFromSupabase() {
+/* ============================================================
+   FIREBASE
+   ============================================================ */
 
-    const [
-        assignmentsResult,
-        classesResult,
-        studentsResult,
-        evaluationsResult
-    ] = await Promise.all([
+async function loadFromFirebase() {
 
-        db.from("assignments").select("*").order("created_at"),
-        db.from("classes").select("*").order("name"),
-        db.from("students").select("*").order("name"),
-        db.from("evaluations").select("*").order("created_at")
+    const collections = [
+        "assignments",
+        "classes",
+        "students",
+        "evaluations"
+    ];
 
-    ]);
+    const results = await Promise.all(
+        collections.map(async collectionName => {
 
+            const snapshot =
+                await getDocs(
+                    collection(db, collectionName)
+                );
 
-    if (assignmentsResult.error) throw assignmentsResult.error;
-    if (classesResult.error) throw classesResult.error;
-    if (studentsResult.error) throw studentsResult.error;
-    if (evaluationsResult.error) throw evaluationsResult.error;
+            return {
+                name: collectionName,
+                data: snapshot.docs.map(
+                    document => ({
+                        id: document.id,
+                        ...document.data()
+                    })
+                )
+            };
 
+        })
+    );
 
-    state.assignments = assignmentsResult.data || [];
-    state.classes = classesResult.data || [];
-    state.students = studentsResult.data || [];
-    state.evaluations = evaluationsResult.data || [];
+    results.forEach(result => {
 
+        state[result.name] =
+            result.data;
+
+    });
 
     saveLocalState();
 
 }
 
 
+/* ============================================================
+   VERBINDINGSSTATUS
+   ============================================================ */
+
 function setConnectionStatus(online) {
 
-    const dot = document.getElementById("connectionDot");
-    const text = document.getElementById("connectionText");
+    const dot =
+        document.getElementById(
+            "connectionDot"
+        );
+
+    const text =
+        document.getElementById(
+            "connectionText"
+        );
 
     if (!dot || !text) return;
 
     if (online) {
 
-        dot.classList.add("online");
-        text.textContent = "Online database";
+        dot.classList.add(
+            "online"
+        );
+
+        text.textContent =
+            "Online database";
 
     } else {
 
-        dot.classList.remove("online");
-        text.textContent = "Lokale modus";
+        dot.classList.remove(
+            "online"
+        );
+
+        text.textContent =
+            "Lokale modus";
 
     }
 
@@ -216,28 +196,44 @@ function setConnectionStatus(online) {
 
 /* ============================================================
    LOCAL STORAGE
-============================================================ */
+   ============================================================ */
 
 function loadLocalState() {
 
     try {
 
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw =
+            localStorage.getItem(
+                STORAGE_KEY
+            );
 
         if (!raw) return;
 
-        const parsed = JSON.parse(raw);
+        const parsed =
+            JSON.parse(raw);
 
         state = {
-            assignments: parsed.assignments || [],
-            classes: parsed.classes || [],
-            students: parsed.students || [],
-            evaluations: parsed.evaluations || []
+
+            assignments:
+                parsed.assignments || [],
+
+            classes:
+                parsed.classes || [],
+
+            students:
+                parsed.students || [],
+
+            evaluations:
+                parsed.evaluations || []
+
         };
 
     } catch (error) {
 
-        console.error("Kon lokale gegevens niet laden:", error);
+        console.error(
+            "Kon lokale gegevens niet laden:",
+            error
+        );
 
     }
 
@@ -255,79 +251,104 @@ function saveLocalState() {
 
 
 /* ============================================================
-   DATABASE HELPERS
-============================================================ */
+   DATABASE HELPERS — FIRESTORE
+   ============================================================ */
 
 function createId(prefix = "") {
 
     return (
         prefix +
         Date.now().toString(36) +
-        Math.random().toString(36).substring(2, 8)
+        Math.random()
+            .toString(36)
+            .substring(2, 8)
     );
 
 }
 
 
-async function dbInsert(table, object) {
+/*
+   Nieuw record opslaan.
+*/
 
-    if (!db) {
+async function dbInsert(
+    collectionName,
+    object
+) {
 
-        return {
-            ...object,
-            id: object.id || createId()
-        };
+    const id =
+        object.id ||
+        createId();
 
-    }
-
-    const { data, error } = await db
-        .from(table)
-        .insert(object)
-        .select()
-        .single();
-
-    if (error) throw error;
-
-    return data;
-
-}
-
-
-async function dbUpdate(table, id, object) {
-
-    if (!db) {
-
-        return {
-            ...object,
+    const reference =
+        doc(
+            db,
+            collectionName,
             id
-        };
+        );
 
-    }
+    await setDoc(
+        reference,
+        object
+    );
 
-    const { data, error } = await db
-        .from(table)
-        .update(object)
-        .eq("id", id)
-        .select()
-        .single();
-
-    if (error) throw error;
-
-    return data;
+    return {
+        ...object,
+        id
+    };
 
 }
 
 
-async function dbDelete(table, id) {
+/*
+   Bestaand record aanpassen.
+*/
 
-    if (!db) return;
+async function dbUpdate(
+    collectionName,
+    id,
+    object
+) {
 
-    const { error } = await db
-        .from(table)
-        .delete()
-        .eq("id", id);
+    const reference =
+        doc(
+            db,
+            collectionName,
+            id
+        );
 
-    if (error) throw error;
+    await updateDoc(
+        reference,
+        object
+    );
+
+    return {
+        ...object,
+        id
+    };
+
+}
+
+
+/*
+   Record verwijderen.
+*/
+
+async function dbDelete(
+    collectionName,
+    id
+) {
+
+    const reference =
+        doc(
+            db,
+            collectionName,
+            id
+        );
+
+    await deleteDoc(
+        reference
+    );
 
 }
 

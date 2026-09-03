@@ -75,9 +75,6 @@ let timerRunning = false;
 
 let filterUnevaluated = false;
 
-let selectedDetailStudentId = null;
-
-
 /* ============================================================
    INITIALISATIE
    ============================================================ */

@@ -1671,6 +1671,7 @@ function hasEvaluation(
 }
 
 
+```javascript
 function calculateEvaluationScore(
     evaluation,
     assignment
@@ -1680,33 +1681,77 @@ function calculateEvaluationScore(
         !evaluation ||
         !assignment ||
         !evaluation.scores
-    ) return null;
+    ) {
+        return null;
+    }
+
+    let totalScore = 0;
+    let maxScore = 0;
+    let evaluatedCount = 0;
+
+    assignment.parameters.forEach(parameter => {
+
+        /*
+           Bepaal de hoogste score die binnen dit
+           criterium mogelijk is.
+        */
+
+        const criterionMax =
+            parameter.levels && parameter.levels.length
+                ? Math.max(
+                    ...parameter.levels.map(level =>
+                        Number(level.score)
+                    )
+                )
+                : 0;
+
+        maxScore += criterionMax;
 
 
-    const values =
-        assignment.parameters
-            .map(parameter =>
-                evaluation.scores[
-                    parameter.id
-                ]?.score
-            )
-            .filter(
-                value =>
-                    typeof value === "number"
-            );
+        /*
+           Kijk of dit criterium beoordeeld is.
+        */
+
+        const selected =
+            evaluation.scores[parameter.id];
+
+        if (
+            selected &&
+            typeof selected.score === "number"
+        ) {
+
+            totalScore += selected.score;
+            evaluatedCount++;
+
+        }
+
+    });
 
 
-    if (!values.length) return null;
+    /*
+       Geen enkele score ingevuld.
+    */
+
+    if (evaluatedCount === 0) {
+        return null;
+    }
 
 
-    return (
-        values.reduce(
-            (sum, value) => sum + value,
-            0
-        ) / values.length
-    );
+    /*
+       Geef de absolute score terug.
+       Bijvoorbeeld: 9 / 12
+    */
+
+    return {
+        total: totalScore,
+        max: maxScore,
+        evaluated: evaluatedCount,
+        totalCriteria: assignment.parameters.length
+    };
 
 }
+```
+
 
 
 function renderHistory() {
@@ -1794,10 +1839,11 @@ function renderHistory() {
                     </div>
 
                     <div class="history-score">
-                        ${
-                            score === null
-                                ? "—"
-                                : formatScore(score)
+                       ${
+    score === null
+        ? "—"
+        : `${score.total} / ${score.max}`
+}
                         }
                     </div>
 
@@ -4104,11 +4150,11 @@ function renderStudentEvaluationHistory() {
 
                     <div class="history-score">
 
-                        ${
-                            score === null
-                                ? "—"
-                                : formatScore(score)
-                        }
+                       ${
+    score === null
+        ? "—"
+        : `${score.total} / ${score.max}`
+}
 
                     </div>
 
@@ -4433,13 +4479,13 @@ function renderClassScores(
 
                     <td>
 
-                        ${
-                            score === null
-                                ? `<span class="no-score">—</span>`
-                                : `<span class="score-value">
-                                    ${formatScore(score)}
-                                   </span>`
-                        }
+                       ${
+    score === null
+        ? `<span class="no-score">—</span>`
+        : `<span class="score-value">
+            ${score.total} / ${score.max}
+           </span>`
+}
 
                     </td>
 
@@ -4942,13 +4988,13 @@ function exportEvaluationPdf(
     );
 
 
-    doc.text(
-        score === null
-            ? "—"
-            : formatScore(score),
-        margin + 10,
-        y + 23
-    );
+   doc.text(
+    score === null
+        ? "—"
+        : `${score.total} / ${score.max}`,
+    margin + 10,
+    y + 23
+);
 
 
     return doc;

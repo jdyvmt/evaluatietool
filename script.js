@@ -1183,59 +1183,92 @@ function updateTotalScore() {
             item => item.id === selectedAssignmentId
         );
 
-
     if (!assignment) return;
 
-
-    const scores = [];
-
-
-    document
-        .querySelectorAll(
+    const checkedInputs =
+        document.querySelectorAll(
             "#evaluationFormContainer .level-card input:checked"
-        )
-        .forEach(input => {
+        );
 
-            const value =
+    const totalElement =
+        document.getElementById("totalScore");
+
+    if (!checkedInputs.length) {
+        totalElement.textContent = "—";
+        return;
+    }
+
+    let totalScore = 0;
+    let maxScore = 0;
+
+    /*
+       Elk criterium telt even zwaar.
+       De score van een gekozen niveau is de absolute score.
+       
+       Het maximaal haalbare aantal punten per criterium
+       wordt automatisch bepaald door het hoogste niveau
+       van dat criterium.
+    */
+
+    const criteria =
+        document.querySelectorAll(
+            "#evaluationFormContainer .criterion-card"
+        );
+
+    criteria.forEach(criterion => {
+
+        const inputs =
+            criterion.querySelectorAll(
+                'input[type="radio"]'
+            );
+
+        if (!inputs.length) return;
+
+        // Hoogste beschikbare score binnen dit criterium
+        let criterionMax = 0;
+
+        inputs.forEach(input => {
+
+            const score =
                 Number(input.dataset.score);
 
-            if (!Number.isNaN(value)) {
-                scores.push(value);
+            if (!Number.isNaN(score)) {
+                criterionMax =
+                    Math.max(criterionMax, score);
             }
 
         });
 
+        maxScore += criterionMax;
 
-    const total =
-        document.getElementById("totalScore");
+        // Geselecteerde score binnen dit criterium
+        const selected =
+            criterion.querySelector(
+                'input[type="radio"]:checked'
+            );
 
+        if (selected) {
 
-    if (!scores.length) {
+            const score =
+                Number(selected.dataset.score);
 
-        total.textContent = "—";
+            if (!Number.isNaN(score)) {
+                totalScore += score;
+            }
 
-        return;
+        }
 
-    }
-
+    });
 
     /*
-       Alle parameters tellen even zwaar mee.
-       Geen gewichten.
+       Toon de absolute score als:
+       behaalde punten / maximaal aantal punten
     */
 
-    const average =
-        scores.reduce(
-            (sum, value) => sum + value,
-            0
-        ) / scores.length;
-
-
-    total.textContent =
-        formatScore(average);
+    totalElement.textContent =
+        `${totalScore} / ${maxScore}`;
 
 }
-
 
 function collectFormData() {
 

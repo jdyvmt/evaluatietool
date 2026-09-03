@@ -32,10 +32,19 @@ const db = getFirestore(app);
    Database: Firebase Firestore
    ============================================================ */
 
-const STORAGE_KEY = "atheneum_brugge_evaluatietool_v1";
 
-const ACCENT = "#2a37b1";
-const BG = "#f5f3f5";
+/* ============================================================
+   CONSTANTEN
+   ============================================================ */
+
+const STORAGE_KEY =
+    "atheneum_brugge_evaluatietool_v1";
+
+const ACCENT =
+    "#2a37b1";
+
+const BG =
+    "#f5f3f5";
 
 
 /* ============================================================
@@ -48,6 +57,7 @@ let state = {
     students: [],
     evaluations: []
 };
+
 
 let selectedAssignmentId = null;
 let selectedClassId = null;
@@ -65,81 +75,96 @@ let timerRunning = false;
 
 let filterUnevaluated = false;
 
+let selectedDetailStudentId = null;
+
 
 /* ============================================================
    INITIALISATIE
    ============================================================ */
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener(
+    "DOMContentLoaded",
+    async () => {
 
-    loadLocalState();
+        loadLocalState();
 
-    setupNavigation();
-    setupEvaluationEvents();
-    setupAssignmentEvents();
-    setupStudentEvents();
-
-    renderAll();
-
-    try {
-
-        await loadFromFirebase();
-
-        setConnectionStatus(true);
+        setupNavigation();
+        setupEvaluationEvents();
+        setupAssignmentEvents();
+        setupStudentEvents();
 
         renderAll();
 
-    } catch (error) {
+        try {
 
-        console.error(
-            "Firebase kon niet worden geladen:",
-            error
-        );
+            await loadFromFirebase();
 
-        setConnectionStatus(false);
+            setConnectionStatus(true);
 
-        showToast(
-            "Database kon niet worden geladen. Lokale gegevens worden gebruikt."
-        );
+            renderAll();
+
+        } catch (error) {
+
+            console.error(
+                "Firebase kon niet worden geladen:",
+                error
+            );
+
+            setConnectionStatus(false);
+
+            showToast(
+                "Database kon niet worden geladen. Lokale gegevens worden gebruikt."
+            );
+
+        }
 
     }
-
-});
+);
 
 
 /* ============================================================
-   FIREBASE
+   FIREBASE — GEGEVENS LADEN
    ============================================================ */
 
 async function loadFromFirebase() {
 
-    const collections = [
+    const collectionNames = [
         "assignments",
         "classes",
         "students",
         "evaluations"
     ];
 
-    const results = await Promise.all(
-        collections.map(async collectionName => {
 
-            const snapshot =
-                await getDocs(
-                    collection(db, collectionName)
-                );
+    const results =
+        await Promise.all(
+            collectionNames.map(
+                async collectionName => {
 
-            return {
-                name: collectionName,
-                data: snapshot.docs.map(
-                    document => ({
-                        id: document.id,
-                        ...document.data()
-                    })
-                )
-            };
+                    const snapshot =
+                        await getDocs(
+                            collection(
+                                db,
+                                collectionName
+                            )
+                        );
 
-        })
-    );
+                    return {
+                        name: collectionName,
+                        data:
+                            snapshot.docs.map(
+                                document => ({
+                                    id:
+                                        document.id,
+                                    ...document.data()
+                                })
+                            )
+                    };
+
+                }
+            )
+        );
+
 
     results.forEach(result => {
 
@@ -147,6 +172,7 @@ async function loadFromFirebase() {
             result.data;
 
     });
+
 
     saveLocalState();
 
@@ -157,7 +183,9 @@ async function loadFromFirebase() {
    VERBINDINGSSTATUS
    ============================================================ */
 
-function setConnectionStatus(online) {
+function setConnectionStatus(
+    online
+) {
 
     const dot =
         document.getElementById(
@@ -170,6 +198,7 @@ function setConnectionStatus(online) {
         );
 
     if (!dot || !text) return;
+
 
     if (online) {
 
@@ -209,8 +238,10 @@ function loadLocalState() {
 
         if (!raw) return;
 
+
         const parsed =
             JSON.parse(raw);
+
 
         state = {
 
@@ -251,10 +282,12 @@ function saveLocalState() {
 
 
 /* ============================================================
-   DATABASE HELPERS — FIRESTORE
+   DATABASE HELPERS — FIREBASE FIRESTORE
    ============================================================ */
 
-function createId(prefix = "") {
+function createId(
+    prefix = ""
+) {
 
     return (
         prefix +
@@ -267,9 +300,9 @@ function createId(prefix = "") {
 }
 
 
-/*
-   Nieuw record opslaan.
-*/
+/* ------------------------------------------------------------
+   RECORD TOEVOEGEN
+   ------------------------------------------------------------ */
 
 async function dbInsert(
     collectionName,
@@ -280,6 +313,7 @@ async function dbInsert(
         object.id ||
         createId();
 
+
     const reference =
         doc(
             db,
@@ -287,22 +321,27 @@ async function dbInsert(
             id
         );
 
-    await setDoc(
-        reference,
-        object
-    );
 
-    return {
+    const data = {
         ...object,
         id
     };
 
+
+    await setDoc(
+        reference,
+        data
+    );
+
+
+    return data;
+
 }
 
 
-/*
-   Bestaand record aanpassen.
-*/
+/* ------------------------------------------------------------
+   RECORD AANPASSEN
+   ------------------------------------------------------------ */
 
 async function dbUpdate(
     collectionName,
@@ -317,10 +356,12 @@ async function dbUpdate(
             id
         );
 
+
     await updateDoc(
         reference,
         object
     );
+
 
     return {
         ...object,
@@ -330,9 +371,74 @@ async function dbUpdate(
 }
 
 
-/*
-   Record verwijderen.
-*/
+/* ------------------------------------------------------------
+   RECORD OPHALEN
+   ------------------------------------------------------------ */
+
+async function dbGet(
+    collectionName,
+    id
+) {
+
+    const reference =
+        doc(
+            db,
+            collectionName,
+            id
+        );
+
+
+    const snapshot =
+        await getDoc(
+            reference
+        );
+
+
+    if (!snapshot.exists()) {
+
+        return null;
+
+    }
+
+
+    return {
+        id: snapshot.id,
+        ...snapshot.data()
+    };
+
+}
+
+
+/* ------------------------------------------------------------
+   ALLE RECORDS OPHALEN
+   ------------------------------------------------------------ */
+
+async function dbGetAll(
+    collectionName
+) {
+
+    const snapshot =
+        await getDocs(
+            collection(
+                db,
+                collectionName
+            )
+        );
+
+
+    return snapshot.docs.map(
+        document => ({
+            id: document.id,
+            ...document.data()
+        })
+    );
+
+}
+
+
+/* ------------------------------------------------------------
+   RECORD VERWIJDEREN
+   ------------------------------------------------------------ */
 
 async function dbDelete(
     collectionName,
@@ -345,6 +451,7 @@ async function dbDelete(
             collectionName,
             id
         );
+
 
     await deleteDoc(
         reference

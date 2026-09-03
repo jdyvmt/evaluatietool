@@ -1,3 +1,30 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    getDoc,
+    doc,
+    setDoc,
+    updateDoc,
+    deleteDoc,
+    query,
+    where
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBam3B7hYra1C51WBHXlcupRHx99bsJtcw",
+    authDomain: "evaluatietool-dbb5e.firebaseapp.com",
+    projectId: "evaluatietool-dbb5e",
+    storageBucket: "evaluatietool-dbb5e.firebasestorage.app",
+    messagingSenderId: "665576535622",
+    appId: "1:665576535622:web:ac29df6b1e4b8c26adfc47"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 /* ============================================================
    EVALUATIETOOL
    Atheneum Brugge

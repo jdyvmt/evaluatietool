@@ -75,6 +75,7 @@ let timerRunning = false;
 
 let filterUnevaluated = false;
 
+```javascript
 /* ============================================================
    INITIALISATIE
    ============================================================ */
@@ -83,14 +84,15 @@ document.addEventListener(
     "DOMContentLoaded",
     async () => {
 
-        loadLocalState();
-
         setupNavigation();
         setupEvaluationEvents();
         setupAssignmentEvents();
         setupStudentEvents();
 
-        renderAll();
+        /*
+           Firebase is de primaire databron.
+           We laden eerst de online database.
+        */
 
         try {
 
@@ -100,6 +102,10 @@ document.addEventListener(
 
             renderAll();
 
+            console.log(
+                "Firebase succesvol geladen."
+            );
+
         } catch (error) {
 
             console.error(
@@ -107,7 +113,16 @@ document.addEventListener(
                 error
             );
 
+            /*
+               Alleen wanneer Firebase niet bereikbaar is,
+               gebruiken we de lokale gegevens als fallback.
+            */
+
+            loadLocalState();
+
             setConnectionStatus(false);
+
+            renderAll();
 
             showToast(
                 "Database kon niet worden geladen. Lokale gegevens worden gebruikt."
@@ -117,6 +132,7 @@ document.addEventListener(
 
     }
 );
+```
 
 
 /* ============================================================

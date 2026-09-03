@@ -2620,109 +2620,96 @@ function getEditingAssignment() {
 
 async function saveAssignment() {
 
-    const assignment =
-        getEditingAssignment();
+    const assignment = getEditingAssignment();
 
     if (!assignment) return;
 
-
-    const title =
-        document
-            .getElementById("assignmentTitle")
-            .value
-            .trim();
-
+    const title = document
+        .getElementById("assignmentTitle")
+        .value
+        .trim();
 
     if (!title) {
-
-        showToast(
-            "Geef de opdracht een titel."
-        );
-
+        showToast("Geef de opdracht een titel.");
         return;
-
     }
 
-
-    assignment.title =
-        title;
-
+    assignment.title = title;
 
     assignment.parameters =
         assignment.parameters.filter(
-            parameter =>
-                parameter.title.trim()
+            parameter => parameter.title.trim()
         );
 
+    const data = {
+        title: assignment.title,
+        comments: assignment.comments || [],
+        parameters: assignment.parameters || [],
+        updated_at: new Date().toISOString()
+    };
 
     try {
 
-        const existing =
-            state.assignments.some(
+        // Bestaat de opdracht al in Firestore?
+        const assignmentRef = doc(
+            db,
+            "assignments",
+            assignment.id
+        );
+
+        const existingDoc =
+            await getDoc(assignmentRef);
+
+        if (existingDoc.exists()) {
+
+            await updateDoc(
+                assignmentRef,
+                data
+            );
+
+        } else {
+
+            await setDoc(
+                assignmentRef,
+                {
+                    ...data,
+                    id: assignment.id,
+                    created_at:
+                        assignment.created_at ||
+                        new Date().toISOString()
+                }
+            );
+
+        }
+
+        // Lokale state bijwerken
+        const index =
+            state.assignments.findIndex(
                 item =>
                     item.id === assignment.id
             );
 
+        if (index >= 0) {
 
-        /*
-           Als het record nog niet echt in de database bestaat,
-           is het een insert. In lokale modus bestaat het gewoon
-           al in state.
-        */
+            state.assignments[index] = {
+                ...state.assignments[index],
+                ...data,
+                id: assignment.id
+            };
 
-        if (db) {
+        } else {
 
-            const dbResult =
-                await db
-                    .from("assignments")
-                    .upsert({
-
-                        id:
-                            assignment.id,
-
-                        title:
-                            assignment.title,
-
-                        comments:
-                            assignment.comments,
-
-                        parameters:
-                            assignment.parameters,
-
-                        updated_at:
-                            new Date().toISOString()
-
-                    })
-                    .select()
-                    .single();
-
-
-            if (dbResult.error)
-                throw dbResult.error;
-
-
-            const index =
-                state.assignments.findIndex(
-                    item =>
-                        item.id === assignment.id
-                );
-
-
-            if (index >= 0) {
-
-                state.assignments[index] =
-                    dbResult.data;
-
-            }
+            state.assignments.push({
+                ...assignment,
+                ...data
+            });
 
         }
-
 
         saveLocalState();
 
         selectedAssignmentId =
             assignment.id;
-
 
         renderAll();
 
@@ -2734,16 +2721,19 @@ async function saveAssignment() {
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Firebase fout bij opslaan opdracht:",
+            error
+        );
 
         showToast(
-            "Opdracht kon niet worden opgeslagen."
+            "Opdracht kon niet worden opgeslagen: " +
+            (error.message || "onbekende fout")
         );
 
     }
 
 }
-
 
 async function duplicateAssignment() {
 

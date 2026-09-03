@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Evaluatietool</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header class="topbar">
+
+    <div class="brand">
+        <div class="brand-mark">E</div>
+        <div>
+            <div class="brand-title">EVALUATIETOOL</div>
+            <div class="brand-subtitle">Atheneum Brugge</div>
+        </div>
+    </div>
+
+    <nav class="main-nav">
+        <button class="nav-button active" data-page="evaluationPage">
+            EVALUATIE
+        </button>
+
+        <button class="nav-button" data-page="assignmentsPage">
+            OPDRACHTEN
+        </button>
+
+        <button class="nav-button" data-page="studentsPage">
+            LEERLINGEN
+        </button>
+    </nav>
+
+    <div class="connection-status">
+        <span id="connectionDot"></span>
+        <span id="connectionText">Lokaal</span>
+    </div>
+
+</header>
+
+
+<main>
+
+    <!-- =========================================================
+         EVALUATIE
+    ========================================================== -->
+
+    <section id="evaluationPage" class="page active-page">
+
+        <div class="page-header">
+            <div>
+                <div class="eyebrow">EVALUATIE</div>
+                <h1>Evaluatieformulier</h1>
+                <p>Beoordeel leerlingen snel en overzichtelijk.</p>
+            </div>
+        </div>
+
+        <div class="evaluation-layout">
+
+            <!-- SELECTIE -->
+
+            <aside class="selection-panel card">
+
+                <div class="card-header">
+                    <div>
+                        <span class="section-label">SELECTIE</span>
+                        <h2>Leerling kiezen</h2>
+                    </div>
+                </div>
+
+                <label for="evaluationAssignment">
+                    Opdracht
+                </label>
+
+                <select id="evaluationAssignment">
+                    <option value="">Kies een opdracht...</option>
+                </select>
+
+
+                <label for="evaluationClass">
+                    Klas
+                </label>
+
+                <select id="evaluationClass">
+                    <option value="">Kies een klas...</option>
+                </select>
+
+
+                <div class="student-filter-row">
+
+                    <input
+                        type="search"
+                        id="studentSearch"
+                        placeholder="Zoek leerling..."
+                    >
+
+                    <button
+                        id="filterUnevaluated"
+                        class="filter-button"
+                        type="button"
+                        title="Toon enkel nog niet geëvalueerde leerlingen"
+                    >
+                        Nog te doen
+                    </button>
+
+                </div>
+
+
+                <div id="studentList" class="student-list">
+
+                    <div class="empty-state small">
+                        Kies eerst een opdracht en een klas.
+                    </div>
+
+                </div>
+
+            </aside>
+
+
+            <!-- FORMULIER -->
+
+            <section class="evaluation-main card">
+
+                <div class="evaluation-top">
+
+                    <div class="selected-student">
+
+                        <span class="section-label">
+                            GESELECTEERDE LEERLING
+                        </span>
+
+                        <h2 id="selectedStudentName">
+                            Geen leerling geselecteerd
+                        </h2>
+
+                        <div id="evaluationMeta" class="muted">
+                            Kies een opdracht, klas en leerling.
+                        </div>
+
+                    </div>
+
+
+                    <div class="evaluation-actions">
+
+                        <div class="timer-box">
+
+                            <div class="timer-label">
+                                SPREEKTIJD
+                            </div>
+
+                            <div id="timerDisplay">
+                                00:00
+                            </div>
+
+                            <div class="timer-buttons">
+
+                                <button id="timerStart" type="button">
+                                    Start
+                                </button>
+
+                                <button id="timerPause" type="button">
+                                    Pauze
+                                </button>
+
+                                <button id="timerReset" type="button">
+                                    Reset
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="score-box">
+
+                            <div class="timer-label">
+                                SCORE
+                            </div>
+
+                            <div id="totalScore">
+                                —
+                            </div>
+
+                        </div>
+
+
+                        <button
+                            id="retakeButton"
+                            class="secondary-button"
+                            type="button"
+                        >
+                            Herkansing
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="history-section">
+
+                    <button
+                        id="toggleHistory"
+                        class="history-toggle"
+                        type="button"
+                    >
+                        <span>Vorige evaluaties</span>
+                        <span>⌄</span>
+                    </button>
+
+                    <div id="evaluationHistory" class="history-content hidden">
+                        <div class="empty-state small">
+                            Nog geen eerdere evaluaties.
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div id="evaluationFormContainer">
+
+                    <div class="empty-state">
+                        <div class="empty-icon">✓</div>
+                        <h3>Start een evaluatie</h3>
+                        <p>
+                            Kies links een opdracht, klas en leerling
+                            om het formulier te openen.
+                        </p>
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+
+        <div class="bottom-actions">
+
+            <button id="saveEvaluation" class="primary-button">
+                Opslaan
+            </button>
+
+            <button id="exportStudent" class="secondary-button">
+                Export leerling
+            </button>
+
+            <button id="exportClass" class="secondary-button">
+                Export klas
+            </button>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================================================
+         OPDRACHTEN
+    ========================================================== -->
+
+    <section id="assignmentsPage" class="page">
+
+        <div class="page-header">
+
+            <div>
+                <div class="eyebrow">OPDRACHTEN</div>
+                <h1>Opdrachten beheren</h1>
+                <p>
+                    Bouw je eigen evaluatieformulieren met parameters en niveaus.
+                </p>
+            </div>
+
+            <button id="newAssignment" class="primary-button">
+                + Nieuwe opdracht
+            </button>
+
+        </div>
+
+
+        <div class="assignment-layout">
+
+            <aside class="assignment-list card">
+
+                <div class="card-header">
+                    <div>
+                        <span class="section-label">OPGESLAGEN</span>
+                        <h2>Opdrachten</h2>
+                    </div>
+                </div>
+
+                <div id="assignmentList">
+
+                    <div class="empty-state small">
+                        Nog geen opdrachten.
+                    </div>
+
+                </div>
+
+            </aside>
+
+
+            <section class="assignment-editor card">
+
+                <div id="assignmentEditorEmpty" class="empty-state">
+
+                    <div class="empty-icon">✦</div>
+
+                    <h3>Maak een opdracht</h3>
+
+                    <p>
+                        Maak links een nieuwe opdracht aan om je evaluatieformulier
+                        te bouwen.
+                    </p>
+
+                </div>
+
+
+                <div id="assignmentEditor" class="hidden">
+
+                    <div class="editor-header">
+
+                        <div>
+                            <span class="section-label">
+                                OPDRACHT BEWERKEN
+                            </span>
+
+                            <h2 id="assignmentEditorTitle">
+                                Nieuwe opdracht
+                            </h2>
+                        </div>
+
+                        <div class="editor-header-actions">
+
+                            <button
+                                id="duplicateAssignment"
+                                class="secondary-button"
+                                type="button"
+                            >
+                                Kopiëren
+                            </button>
+
+                            <button
+                                id="deleteAssignment"
+                                class="danger-button"
+                                type="button"
+                            >
+                                Verwijderen
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="form-grid">
+
+                        <div class="field full">
+
+                            <label for="assignmentTitle">
+                                Titel van de opdracht
+                            </label>
+
+                            <input
+                                id="assignmentTitle"
+                                type="text"
+                                placeholder="Bijvoorbeeld: Mondelinge presentatie"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="builder-section">
+
+                        <div class="builder-heading">
+
+                            <div>
+                                <span class="section-label">
+                                    STANDAARDCOMMENTAREN
+                                </span>
+
+                                <h3>
+                                    Snelcommentaren
+                                </h3>
+                            </div>
+
+                            <button
+                                id="addComment"
+                                class="small-primary"
+                                type="button"
+                            >
+                                + Commentaar
+                            </button>
+
+                        </div>
+
+                        <div id="commentsBuilder"></div>
+
+                    </div>
+
+
+                    <div class="builder-section">
+
+                        <div class="builder-heading">
+
+                            <div>
+                                <span class="section-label">
+                                    BEOORDELINGSCRITERIA
+                                </span>
+
+                                <h3>
+                                    Parameters
+                                </h3>
+
+                                <p class="builder-description">
+                                    Elk criterium krijgt zijn eigen niveaus.
+                                    Het aantal niveaus is volledig vrij.
+                                </p>
+                            </div>
+
+                            <button
+                                id="addParameter"
+                                class="small-primary"
+                                type="button"
+                            >
+                                + Parameter
+                            </button>
+
+                        </div>
+
+                        <div id="parametersBuilder"></div>
+
+                    </div>
+
+
+                    <div class="editor-footer">
+
+                        <button
+                            id="saveAssignment"
+                            class="primary-button"
+                        >
+                            Opdracht opslaan
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================================================
+         LEERLINGEN
+    ========================================================== -->
+
+    <section id="studentsPage" class="page">
+
+        <div class="page-header">
+
+            <div>
+                <div class="eyebrow">LEERLINGEN</div>
+                <h1>Klassen & leerlingen</h1>
+                <p>
+                    Beheer je klassen en bekijk de evaluatiegeschiedenis.
+                </p>
+            </div>
+
+            <button id="newClass" class="primary-button">
+                + Nieuwe klas
+            </button>
+
+        </div>
+
+
+        <div class="students-layout">
+
+            <aside class="class-list card">
+
+                <div class="card-header">
+
+                    <div>
+                        <span class="section-label">KLASSEN</span>
+                        <h2>Mijn klassen</h2>
+                    </div>
+
+                </div>
+
+                <div id="classList">
+
+                    <div class="empty-state small">
+                        Nog geen klassen.
+                    </div>
+
+                </div>
+
+            </aside>
+
+
+            <section class="class-editor card">
+
+                <div id="classEmpty" class="empty-state">
+
+                    <div class="empty-icon">♙</div>
+
+                    <h3>Kies een klas</h3>
+
+                    <p>
+                        Selecteer links een klas om leerlingen te beheren.
+                    </p>
+
+                </div>
+
+
+                <div id="classContent" class="hidden">
+
+                    <div class="editor-header">
+
+                        <div>
+
+                            <span class="section-label">
+                                KLAS
+                            </span>
+
+                            <h2 id="classTitle">
+                                —
+                            </h2>
+
+                        </div>
+
+                        <div class="editor-header-actions">
+
+                            <button
+                                id="editClass"
+                                class="secondary-button"
+                            >
+                                Bewerken
+                            </button>
+
+                            <button
+                                id="deleteClass"
+                                class="danger-button"
+                            >
+                                Verwijderen
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="student-add">
+
+                        <input
+                            id="newStudentName"
+                            type="text"
+                            placeholder="Naam van de leerling..."
+                        >
+
+                        <button
+                            id="addStudent"
+                            class="primary-button"
+                        >
+                            Leerling toevoegen
+                        </button>
+
+                    </div>
+
+
+                    <div class="class-statistics">
+
+                        <div class="stat-card">
+                            <span>LEERLINGEN</span>
+                            <strong id="classStudentCount">0</strong>
+                        </div>
+
+                        <div class="stat-card">
+                            <span>EVALUATIES</span>
+                            <strong id="classEvaluationCount">0</strong>
+                        </div>
+
+                    </div>
+
+
+                    <div class="class-tabs">
+
+                        <button
+                            class="class-tab active"
+                            data-class-tab="studentsTab"
+                        >
+                            Leerlingen
+                        </button>
+
+                        <button
+                            class="class-tab"
+                            data-class-tab="scoresTab"
+                        >
+                            Scoreoverzicht
+                        </button>
+
+                    </div>
+
+
+                    <div id="studentsTab" class="class-tab-content">
+
+                        <div id="studentsTable"></div>
+
+                    </div>
+
+
+                    <div id="scoresTab" class="class-tab-content hidden">
+
+                        <div id="classScores"></div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+
+        <section
+            id="studentDetail"
+            class="card student-detail hidden"
+        >
+
+            <div class="editor-header">
+
+                <div>
+
+                    <span class="section-label">
+                        LEERLING
+                    </span>
+
+                    <h2 id="studentDetailName">
+                        —
+                    </h2>
+
+                </div>
+
+                <button
+                    id="closeStudentDetail"
+                    class="secondary-button"
+                >
+                    Sluiten
+                </button>
+
+            </div>
+
+
+            <div class="student-class-change">
+
+                <label for="studentClassChange">
+                    Klas
+                </label>
+
+                <select id="studentClassChange"></select>
+
+                <button
+                    id="saveStudentClass"
+                    class="primary-button"
+                >
+                    Klas wijzigen
+                </button>
+
+            </div>
+
+
+            <div>
+
+                <span class="section-label">
+                    GESCHIEDENIS
+                </span>
+
+                <h3>Alle evaluaties</h3>
+
+            </div>
+
+            <div id="studentEvaluationHistory"></div>
+
+        </section>
+
+    </section>
+
+</main>
+
+
+<!-- =============================================================
+     MODAL
+============================================================== -->
+
+<div id="modal" class="modal hidden">
+
+    <div class="modal-backdrop"></div>
+
+    <div class="modal-window">
+
+        <div class="modal-header">
+
+            <h2 id="modalTitle">
+                —
+            </h2>
+
+            <button id="closeModal" class="modal-close">
+                ×
+            </button>
+
+        </div>
+
+        <div id="modalBody"></div>
+
+    </div>
+
+</div>
+
+
+<!-- =============================================================
+     TOAST
+============================================================== -->
+
+<div id="toast" class="toast">
+    <span id="toastMessage"></span>
+</div>
+
+
+<!-- =============================================================
+     LIBRARIES
+============================================================== -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
+<script src="script.js"></script>
+
+</body>
+</html>

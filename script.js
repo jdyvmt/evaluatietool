@@ -3797,3 +3797,1895 @@ function renderAssignments() {
         );
 
 }
+/* ============================================================
+   LEERLINGEN EVENTS
+============================================================ */
+
+function setupStudentEvents() {
+
+    document
+        .getElementById("newClass")
+        .addEventListener(
+            "click",
+            createClass
+        );
+
+
+    document
+        .getElementById("addStudent")
+        .addEventListener(
+            "click",
+            addStudent
+        );
+
+
+    document
+        .getElementById("editClass")
+        .addEventListener(
+            "click",
+            editClass
+        );
+
+
+    document
+        .getElementById("deleteClass")
+        .addEventListener(
+            "click",
+            deleteClass
+        );
+
+
+    document
+        .getElementById("saveStudentClass")
+        .addEventListener(
+            "click",
+            saveStudentClass
+        );
+
+
+    document
+        .getElementById("closeStudentDetail")
+        .addEventListener(
+            "click",
+            () => {
+
+                document
+                    .getElementById("studentDetail")
+                    .classList.add("hidden");
+
+            }
+        );
+
+
+    document
+        .querySelectorAll(".class-tab")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    document
+                        .querySelectorAll(".class-tab")
+                        .forEach(item =>
+                            item.classList.remove("active")
+                        );
+
+
+                    document
+                        .querySelectorAll(".class-tab-content")
+                        .forEach(item =>
+                            item.classList.add("hidden")
+                        );
+
+
+                    button.classList.add("active");
+
+
+                    document
+                        .getElementById(
+                            button.dataset.classTab
+                        )
+                        .classList.remove("hidden");
+
+                }
+            );
+
+        });
+
+}
+
+
+/* ============================================================
+   KLASSEN
+============================================================ */
+
+async function createClass() {
+
+    const name =
+        prompt(
+            "Naam van de nieuwe klas:"
+        );
+
+
+    if (!name?.trim()) return;
+
+
+    const cls = {
+
+        id:
+            createId("class_"),
+
+        name:
+            name.trim(),
+
+        created_at:
+            new Date().toISOString(),
+
+        updated_at:
+            new Date().toISOString()
+
+    };
+
+
+    try {
+
+        const result =
+            await dbInsert(
+                "classes",
+                cls
+            );
+
+
+        state.classes.push(
+            result
+        );
+
+
+        selectedClassId =
+            result.id;
+
+
+        renderClasses();
+        renderClassContent();
+
+        renderEvaluationSelectors();
+
+        showToast(
+            "Klas aangemaakt."
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast(
+            "Klas kon niet worden aangemaakt."
+        );
+
+    }
+
+}
+
+
+function renderClasses() {
+
+    const container =
+        document.getElementById(
+            "classList"
+        );
+
+
+    if (!state.classes.length) {
+
+        container.innerHTML = `
+            <div class="empty-state small">
+                Nog geen klassen.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        state.classes.map(cls => {
+
+            const count =
+                state.students.filter(
+                    student =>
+                        student.class_id === cls.id
+                ).length;
+
+
+            return `
+                <div
+                    class="class-item ${
+                        cls.id === selectedClassId
+                            ? "active"
+                            : ""
+                    }"
+                    data-class-id="${escapeHtml(cls.id)}"
+                >
+
+                    <div class="class-item-name">
+                        ${escapeHtml(cls.name)}
+                    </div>
+
+                    <div class="class-item-count">
+                        ${count}
+                    </div>
+
+                </div>
+            `;
+
+        }).join("");
+
+
+    container
+        .querySelectorAll(
+            "[data-class-id]"
+        )
+        .forEach(item => {
+
+            item.addEventListener(
+                "click",
+                () => {
+
+                    selectedClassId =
+                        item.dataset.classId;
+
+                    renderClasses();
+                    renderClassContent();
+
+                    renderEvaluationSelectors();
+                    renderEvaluationStudents();
+
+                }
+            );
+
+        });
+
+}
+
+
+function renderClassContent() {
+
+    const empty =
+        document.getElementById(
+            "classEmpty"
+        );
+
+    const content =
+        document.getElementById(
+            "classContent"
+        );
+
+
+    const cls =
+        state.classes.find(
+            item =>
+                item.id === selectedClassId
+        );
+
+
+    if (!cls) {
+
+        empty.classList.remove("hidden");
+        content.classList.add("hidden");
+
+        return;
+
+    }
+
+
+    empty.classList.add("hidden");
+    content.classList.remove("hidden");
+
+
+    document.getElementById(
+        "classTitle"
+    ).textContent =
+        cls.name;
+
+
+    const students =
+        state.students.filter(
+            student =>
+                student.class_id === cls.id
+        );
+
+
+    document.getElementById(
+        "classStudentCount"
+    ).textContent =
+        students.length;
+
+
+    document.getElementById(
+        "classEvaluationCount"
+    ).textContent =
+        state.evaluations.filter(
+            evaluation =>
+                evaluation.class_id === cls.id
+        ).length;
+
+
+    renderStudentsTable(
+        students
+    );
+
+    renderClassScores(
+        cls,
+        students
+    );
+
+}
+
+
+function renderStudentsTable(
+    students
+) {
+
+    const container =
+        document.getElementById(
+            "studentsTable"
+        );
+
+
+    if (!students.length) {
+
+        container.innerHTML = `
+            <div class="empty-state small">
+                Voeg je eerste leerling toe.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    container.innerHTML = `
+
+        <table class="students-table">
+
+            <thead>
+
+                <tr>
+                    <th>LEERLING</th>
+                    <th>EVALUATIES</th>
+                    <th></th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                ${
+                    students.map(student => {
+
+                        const evaluations =
+                            state.evaluations.filter(
+                                evaluation =>
+                                    evaluation.student_id ===
+                                    student.id
+                            ).length;
+
+
+                        return `
+
+                            <tr>
+
+                                <td>
+                                    <strong>
+                                        ${escapeHtml(student.name)}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    ${evaluations}
+                                </td>
+
+                                <td>
+
+                                    <div class="table-actions">
+
+                                        <button
+                                            class="table-action"
+                                            data-student-detail="${escapeHtml(student.id)}"
+                                        >
+                                            Bekijken
+                                        </button>
+
+                                        <button
+                                            class="table-action"
+                                            data-delete-student="${escapeHtml(student.id)}"
+                                        >
+                                            Verwijderen
+                                        </button>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        `;
+
+                    }).join("")
+                }
+
+            </tbody>
+
+        </table>
+
+    `;
+
+
+    container
+        .querySelectorAll(
+            "[data-student-detail]"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    openStudentDetail(
+                        button.dataset.studentDetail
+                    );
+
+                }
+            );
+
+        });
+
+
+    container
+        .querySelectorAll(
+            "[data-delete-student]"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                async () => {
+
+                    const student =
+                        state.students.find(
+                            item =>
+                                item.id ===
+                                button.dataset.deleteStudent
+                        );
+
+
+                    if (!student) return;
+
+
+                    if (
+                        !confirm(
+                            `${student.name} verwijderen?`
+                        )
+                    ) return;
+
+
+                    try {
+
+                        await dbDelete(
+                            "students",
+                            student.id
+                        );
+
+
+                        state.students =
+                            state.students.filter(
+                                item =>
+                                    item.id !==
+                                    student.id
+                            );
+
+
+                        state.evaluations =
+                            state.evaluations.filter(
+                                item =>
+                                    item.student_id !==
+                                    student.id
+                            );
+
+
+                        renderAll();
+
+                        showToast(
+                            "Leerling verwijderd."
+                        );
+
+                    } catch (error) {
+
+                        console.error(error);
+
+                        showToast(
+                            "Verwijderen mislukt."
+                        );
+
+                    }
+
+                }
+            );
+
+        });
+
+}
+
+
+async function addStudent() {
+
+    if (!selectedClassId) {
+
+        showToast(
+            "Selecteer eerst een klas."
+        );
+
+        return;
+
+    }
+
+
+    const input =
+        document.getElementById(
+            "newStudentName"
+        );
+
+
+    const name =
+        input.value.trim();
+
+
+    if (!name) {
+
+        showToast(
+            "Vul een naam in."
+        );
+
+        return;
+
+    }
+
+
+    const student = {
+
+        id:
+            createId("student_"),
+
+        name,
+
+        class_id:
+            selectedClassId,
+
+        created_at:
+            new Date().toISOString(),
+
+        updated_at:
+            new Date().toISOString()
+
+    };
+
+
+    try {
+
+        const result =
+            await dbInsert(
+                "students",
+                student
+            );
+
+
+        state.students.push(
+            result
+        );
+
+
+        input.value = "";
+
+
+        renderClasses();
+        renderClassContent();
+
+        renderEvaluationStudents();
+
+        showToast(
+            "Leerling toegevoegd."
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast(
+            "Leerling kon niet worden toegevoegd."
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   KLAS BEWERKEN
+============================================================ */
+
+async function editClass() {
+
+    const cls =
+        state.classes.find(
+            item =>
+                item.id === selectedClassId
+        );
+
+
+    if (!cls) return;
+
+
+    const name =
+        prompt(
+            "Nieuwe naam:",
+            cls.name
+        );
+
+
+    if (!name?.trim()) return;
+
+
+    try {
+
+        const updated =
+            await dbUpdate(
+                "classes",
+                cls.id,
+                {
+
+                    name:
+                        name.trim(),
+
+                    updated_at:
+                        new Date().toISOString()
+
+                }
+            );
+
+
+        Object.assign(
+            cls,
+            updated
+        );
+
+
+        renderClasses();
+        renderClassContent();
+        renderEvaluationSelectors();
+
+        showToast(
+            "Klas aangepast."
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast(
+            "Klas kon niet worden aangepast."
+        );
+
+    }
+
+}
+
+
+async function deleteClass() {
+
+    const cls =
+        state.classes.find(
+            item =>
+                item.id === selectedClassId
+        );
+
+
+    if (!cls) return;
+
+
+    if (
+        !confirm(
+            `Klas ${cls.name} verwijderen?\n\nOok de leerlingen en hun evaluaties worden verwijderd.`
+        )
+    ) return;
+
+
+    try {
+
+        await dbDelete(
+            "classes",
+            cls.id
+        );
+
+
+        state.classes =
+            state.classes.filter(
+                item =>
+                    item.id !== cls.id
+            );
+
+
+        state.students =
+            state.students.filter(
+                student =>
+                    student.class_id !== cls.id
+            );
+
+
+        state.evaluations =
+            state.evaluations.filter(
+                evaluation =>
+                    evaluation.class_id !== cls.id
+            );
+
+
+        selectedClassId = null;
+
+        renderAll();
+
+        showToast(
+            "Klas verwijderd."
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast(
+            "Klas kon niet worden verwijderd."
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   LEERLING DETAIL
+============================================================ */
+
+function openStudentDetail(
+    studentId
+) {
+
+    selectedDetailStudentId =
+        studentId;
+
+
+    const student =
+        state.students.find(
+            item =>
+                item.id === studentId
+        );
+
+
+    if (!student) return;
+
+
+    const panel =
+        document.getElementById(
+            "studentDetail"
+        );
+
+
+    panel.classList.remove(
+        "hidden"
+    );
+
+
+    document.getElementById(
+        "studentDetailName"
+    ).textContent =
+        student.name;
+
+
+    const select =
+        document.getElementById(
+            "studentClassChange"
+        );
+
+
+    select.innerHTML =
+        state.classes.map(cls => `
+
+            <option
+                value="${escapeHtml(cls.id)}"
+                ${
+                    cls.id === student.class_id
+                        ? "selected"
+                        : ""
+                }
+            >
+                ${escapeHtml(cls.name)}
+            </option>
+
+        `).join("");
+
+
+    renderStudentEvaluationHistory();
+
+
+    panel.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+
+}
+
+
+function renderStudentEvaluationHistory() {
+
+    const container =
+        document.getElementById(
+            "studentEvaluationHistory"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    const student =
+        state.students.find(
+            item =>
+                item.id ===
+                selectedDetailStudentId
+        );
+
+    if (!student) {
+
+        container.innerHTML =
+            "<p>Geen leerling geselecteerd.</p>";
+
+        return;
+    }
+
+    const evaluations =
+        state.evaluations
+            .filter(
+                evaluation =>
+                    evaluation.student_id ===
+                    student.id
+            )
+            .sort(
+                (a, b) =>
+                    new Date(
+                        b.created_at || 0
+                    ) -
+                    new Date(
+                        a.created_at || 0
+                    )
+            );
+
+    if (!evaluations.length) {
+
+        container.innerHTML =
+            "<p>Deze leerling heeft nog geen evaluaties.</p>";
+
+        return;
+    }
+
+    container.innerHTML =
+        evaluations
+            .map(
+                evaluation => {
+
+                    const assignment =
+                        state.assignments.find(
+                            item =>
+                                item.id ===
+                                evaluation.assignment_id
+                        );
+
+                    const score =
+                        calculateEvaluationScore(
+                            evaluation,
+                            assignment
+                        );
+
+                    const date =
+                        evaluation.created_at
+                            ? new Date(
+                                  evaluation.created_at
+                              ).toLocaleString(
+                                  "nl-BE"
+                              )
+                            : "—";
+
+                    return `
+                        <div class="history-item">
+
+                            <div class="history-main">
+
+                                <strong>
+                                    ${
+                                        assignment
+                                            ? assignment.title
+                                            : "Onbekende opdracht"
+                                    }
+                                </strong>
+
+                                <span>
+                                    ${date}
+                                </span>
+
+                            </div>
+
+                            <div class="history-score">
+
+                                ${
+                                    score === null
+                                        ? "—"
+                                        : `${score.total} / ${score.max}`
+                                }
+
+                            </div>
+
+                        </div>
+                    `;
+                }
+            )
+            .join("");
+}
+
+
+/* ============================================================
+   LEERLING AAN KLAS TOEVOEGEN
+============================================================ */
+
+async function saveStudentClass(
+    studentId,
+    classId
+) {
+
+    const student =
+        state.students.find(
+            item =>
+                item.id === studentId
+        );
+
+    if (!student) {
+        return;
+    }
+
+    try {
+
+        await dbUpdate(
+            "students",
+            studentId,
+            {
+                class_id:
+                    classId || null
+            }
+        );
+
+        student.class_id =
+            classId || null;
+
+        renderAll();
+
+        showToast(
+            "Klas van de leerling opgeslagen."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Klas leerling opslaan:",
+            error
+        );
+
+        showToast(
+            "Klas kon niet worden opgeslagen."
+        );
+    }
+}
+
+
+/* ============================================================
+   KLAS SCORES
+============================================================ */
+
+function renderClassScores() {
+
+    const container =
+        document.getElementById(
+            "classScores"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    const classStudents =
+        state.students.filter(
+            student =>
+                student.class_id ===
+                selectedClassId
+        );
+
+    const assignment =
+        state.assignments.find(
+            item =>
+                item.id ===
+                selectedAssignmentId
+        );
+
+    if (!assignment) {
+
+        container.innerHTML =
+            "<p>Selecteer eerst een opdracht.</p>";
+
+        return;
+    }
+
+    if (!classStudents.length) {
+
+        container.innerHTML =
+            "<p>Deze klas heeft nog geen leerlingen.</p>";
+
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="class-score-table">
+
+            <div class="class-score-header">
+
+                <span>Leerling</span>
+                <span>Score</span>
+
+            </div>
+
+            ${
+                classStudents
+                    .map(
+                        student => {
+
+                            const evaluation =
+                                state.evaluations
+                                    .filter(
+                                        item =>
+                                            item.student_id ===
+                                                student.id &&
+                                            item.assignment_id ===
+                                                assignment.id
+                                    )
+                                    .sort(
+                                        (a, b) =>
+                                            new Date(
+                                                b.created_at || 0
+                                            ) -
+                                            new Date(
+                                                a.created_at || 0
+                                            )
+                                    )[0];
+
+                            const score =
+                                evaluation
+                                    ? calculateEvaluationScore(
+                                          evaluation,
+                                          assignment
+                                      )
+                                    : null;
+
+                            return `
+                                <div class="class-score-row">
+
+                                    <span>
+                                        ${student.name}
+                                    </span>
+
+                                    <span>
+
+                                        ${
+                                            score === null
+                                                ? `<span class="no-score">—</span>`
+                                                : `<span class="score-value">
+                                                    ${score.total} / ${score.max}
+                                                   </span>`
+                                        }
+
+                                    </span>
+
+                                </div>
+                            `;
+                        }
+                    )
+                    .join("")
+            }
+
+        </div>
+    `;
+}
+
+
+/* ============================================================
+   PDF
+============================================================ */
+
+function addPdfHeader(
+    doc,
+    title
+) {
+
+    const pageWidth =
+        doc.internal.pageSize.getWidth();
+
+    doc.setFont(
+        "helvetica",
+        "bold"
+    );
+
+    doc.setFontSize(
+        18
+    );
+
+    doc.text(
+        title,
+        pageWidth / 2,
+        25,
+        {
+            align: "center"
+        }
+    );
+
+    doc.setFont(
+        "helvetica",
+        "normal"
+    );
+
+    doc.setFontSize(
+        9
+    );
+
+    doc.text(
+        "Evaluatietool",
+        pageWidth / 2,
+        33,
+        {
+            align: "center"
+        }
+    );
+
+    return doc;
+}
+
+
+function exportEvaluationPdf(
+    evaluation,
+    assignment,
+    student,
+    existingDoc = null
+) {
+
+    if (
+        !evaluation ||
+        !assignment ||
+        !student
+    ) {
+        showToast(
+            "Onvoldoende gegevens voor PDF-export."
+        );
+
+        return;
+    }
+
+    const doc =
+        existingDoc ||
+        new window.jspdf.jsPDF();
+
+    if (!existingDoc) {
+
+        addPdfHeader(
+            doc,
+            assignment.title
+        );
+    }
+
+    const pageWidth =
+        doc.internal.pageSize.getWidth();
+
+    let y = 70;
+
+    doc.setFont(
+        "helvetica",
+        "bold"
+    );
+
+    doc.setFontSize(
+        13
+    );
+
+    doc.text(
+        "Leerling",
+        20,
+        y
+    );
+
+    doc.setFont(
+        "helvetica",
+        "normal"
+    );
+
+    doc.text(
+        student.name || "—",
+        20,
+        y + 8
+    );
+
+    y += 25;
+
+    const score =
+        calculateEvaluationScore(
+            evaluation,
+            assignment
+        );
+
+    doc.setFont(
+        "helvetica",
+        "bold"
+    );
+
+    doc.setFontSize(
+        14
+    );
+
+    doc.text(
+        "Eindscore",
+        20,
+        y
+    );
+
+    doc.setFont(
+        "helvetica",
+        "normal"
+    );
+
+    doc.setFontSize(
+        13
+    );
+
+    doc.text(
+        score === null
+            ? "—"
+            : `${score.total} / ${score.max}`,
+        30,
+        y + 12
+    );
+
+    y += 30;
+
+    doc.setFontSize(
+        11
+    );
+
+    assignment.parameters.forEach(
+        (parameter, index) => {
+
+            if (y > 260) {
+
+                doc.addPage();
+
+                addPdfHeader(
+                    doc,
+                    assignment.title
+                );
+
+                y = 55;
+            }
+
+            const selected =
+                evaluation.scores
+                    ? evaluation.scores[
+                          parameter.id
+                      ]
+                    : null;
+
+            doc.setFont(
+                "helvetica",
+                "bold"
+            );
+
+            doc.text(
+                `${index + 1}. ${parameter.title}`,
+                20,
+                y
+            );
+
+            y += 7;
+
+            doc.setFont(
+                "helvetica",
+                "normal"
+            );
+
+            if (selected) {
+
+                const levelTitle =
+                    selected.level_title ||
+                    "";
+
+                const selectedScore =
+                    typeof selected.score ===
+                    "number"
+                        ? selected.score
+                        : "—";
+
+                doc.text(
+                    `Score: ${selectedScore}`,
+                    25,
+                    y
+                );
+
+                y += 6;
+
+                if (levelTitle) {
+
+                    const levelLines =
+                        doc.splitTextToSize(
+                            `Niveau: ${levelTitle}`,
+                            pageWidth - 50
+                        );
+
+                    doc.text(
+                        levelLines,
+                        25,
+                        y
+                    );
+
+                    y +=
+                        levelLines.length *
+                        5;
+                }
+
+                if (
+                    selected.explanation
+                ) {
+
+                    const explanationLines =
+                        doc.splitTextToSize(
+                            selected.explanation,
+                            pageWidth - 50
+                        );
+
+                    doc.text(
+                        explanationLines,
+                        25,
+                        y
+                    );
+
+                    y +=
+                        explanationLines.length *
+                        5;
+                }
+
+            } else {
+
+                doc.text(
+                    "Niet geëvalueerd",
+                    25,
+                    y
+                );
+
+                y += 6;
+            }
+
+            y += 8;
+        }
+    );
+
+    if (
+        evaluation.comments ||
+        evaluation.feedback
+    ) {
+
+        if (y > 245) {
+
+            doc.addPage();
+
+            addPdfHeader(
+                doc,
+                assignment.title
+            );
+
+            y = 55;
+        }
+
+        doc.setFont(
+            "helvetica",
+            "bold"
+        );
+
+        doc.text(
+            "Opmerkingen",
+            20,
+            y
+        );
+
+        y += 8;
+
+        doc.setFont(
+            "helvetica",
+            "normal"
+        );
+
+        const comments =
+            evaluation.comments ||
+            evaluation.feedback ||
+            "";
+
+        const commentLines =
+            doc.splitTextToSize(
+                comments,
+                pageWidth - 40
+            );
+
+        doc.text(
+            commentLines,
+            20,
+            y
+        );
+    }
+
+    return doc;
+}
+
+
+/* ============================================================
+   PDF LEERLING
+============================================================ */
+
+function exportStudentEvaluationPdf(
+    evaluationId
+) {
+
+    const evaluation =
+        state.evaluations.find(
+            item =>
+                item.id === evaluationId
+        );
+
+    if (!evaluation) {
+
+        showToast(
+            "Evaluatie niet gevonden."
+        );
+
+        return;
+    }
+
+    const assignment =
+        state.assignments.find(
+            item =>
+                item.id ===
+                evaluation.assignment_id
+        );
+
+    const student =
+        state.students.find(
+            item =>
+                item.id ===
+                evaluation.student_id
+        );
+
+    if (
+        !assignment ||
+        !student
+    ) {
+
+        showToast(
+            "Gegevens voor PDF ontbreken."
+        );
+
+        return;
+    }
+
+    const doc =
+        exportEvaluationPdf(
+            evaluation,
+            assignment,
+            student
+        );
+
+    if (!doc) {
+        return;
+    }
+
+    const filename =
+        `${student.name} - ${assignment.title}.pdf`
+            .replace(
+                /[/\\?%*:|"<>]/g,
+                "-"
+            );
+
+    doc.save(
+        filename
+    );
+}
+
+
+/* ============================================================
+   PDF KLAS
+============================================================ */
+
+function exportSelectedClass() {
+
+    const students =
+        state.students.filter(
+            student =>
+                student.class_id ===
+                selectedClassId
+        );
+
+    if (!students.length) {
+
+        showToast(
+            "Deze klas heeft geen leerlingen."
+        );
+
+        return;
+    }
+
+    const assignments =
+        selectedAssignmentId
+            ? state.assignments.filter(
+                  assignment =>
+                      assignment.id ===
+                      selectedAssignmentId
+              )
+            : state.assignments;
+
+    if (!assignments.length) {
+
+        showToast(
+            "Er zijn geen opdrachten beschikbaar."
+        );
+
+        return;
+    }
+
+    const evaluations = [];
+
+    students.forEach(
+        student => {
+
+            assignments.forEach(
+                assignment => {
+
+                    const evaluation =
+                        state.evaluations
+                            .filter(
+                                item =>
+                                    item.student_id ===
+                                        student.id &&
+                                    item.assignment_id ===
+                                        assignment.id
+                            )
+                            .sort(
+                                (a, b) =>
+                                    new Date(
+                                        b.created_at || 0
+                                    ) -
+                                    new Date(
+                                        a.created_at || 0
+                                    )
+                            )[0];
+
+                    if (evaluation) {
+
+                        evaluations.push({
+                            evaluation,
+                            assignment,
+                            student
+                        });
+                    }
+                }
+            );
+        }
+    );
+
+    if (!evaluations.length) {
+
+        showToast(
+            "Er zijn geen evaluaties om te exporteren."
+        );
+
+        return;
+    }
+
+    let doc = null;
+
+    evaluations.forEach(
+        (
+            item,
+            index
+        ) => {
+
+            if (index > 0) {
+                doc.addPage();
+            }
+
+            doc =
+                exportEvaluationPdf(
+                    item.evaluation,
+                    item.assignment,
+                    item.student,
+                    doc
+                );
+        }
+    );
+
+    if (!doc) {
+        return;
+    }
+
+    const className =
+        state.classes.find(
+            item =>
+                item.id ===
+                selectedClassId
+        )?.name ||
+        "klas";
+
+    doc.save(
+        `${className} - evaluaties.pdf`
+            .replace(
+                /[/\\?%*:|"<>]/g,
+                "-"
+            )
+    );
+}
+
+
+/* ============================================================
+   ALLES OPNIEUW RENDEREN
+============================================================ */
+
+function renderAll() {
+
+    renderAssignments();
+
+    renderClasses();
+
+    renderForm();
+
+    renderClassContent();
+
+    renderStudentEvaluationHistory();
+
+    renderClassScores();
+
+    updateTotalScore();
+
+    updateTimerDisplay();
+}
+
+
+/* ============================================================
+   HULPFUNCTIES
+============================================================ */
+
+function createId() {
+
+    return (
+        Date.now().toString(36) +
+        Math.random()
+            .toString(36)
+            .substring(2, 9)
+    );
+}
+
+
+function escapeHtml(
+    value
+) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "";
+    }
+
+    return String(value)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+}
+
+
+function formatDate(
+    date
+) {
+
+    if (!date) {
+        return "—";
+    }
+
+    const parsed =
+        new Date(date);
+
+    if (
+        Number.isNaN(
+            parsed.getTime()
+        )
+    ) {
+        return "—";
+    }
+
+    return parsed.toLocaleDateString(
+        "nl-BE",
+        {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric"
+        }
+    );
+}
+
+
+function formatDateTime(
+    date
+) {
+
+    if (!date) {
+        return "—";
+    }
+
+    const parsed =
+        new Date(date);
+
+    if (
+        Number.isNaN(
+            parsed.getTime()
+        )
+    ) {
+        return "—";
+    }
+
+    return parsed.toLocaleString(
+        "nl-BE",
+        {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        }
+    );
+}
+
+
+/* ============================================================
+   SCORE WEERGAVE
+============================================================ */
+
+function formatScore(
+    score
+) {
+
+    if (
+        score === null ||
+        score === undefined ||
+        Number.isNaN(
+            Number(score)
+        )
+    ) {
+        return "—";
+    }
+
+    return String(
+        score
+    );
+}
+
+
+/* ============================================================
+   TOAST
+============================================================ */
+
+function showToast(
+    message
+) {
+
+    const toast =
+        document.getElementById(
+            "toast"
+        );
+
+    const toastMessage =
+        document.getElementById(
+            "toastMessage"
+        );
+
+    if (!toast || !toastMessage) {
+        return;
+    }
+
+    toastMessage.textContent =
+        message;
+
+    toast.classList.add(
+        "show"
+    );
+
+    clearTimeout(
+        showToast.timeout
+    );
+
+    showToast.timeout =
+        setTimeout(
+            () => {
+
+                toast.classList.remove(
+                    "show"
+                );
+
+            },
+            2500
+        );
+}
+
+
+/* ============================================================
+   TIMER
+============================================================ */
+
+function updateTimerDisplay() {
+
+    const timer =
+        document.getElementById(
+            "timerDisplay"
+        );
+
+    if (!timer) {
+        return;
+    }
+
+    const minutes =
+        Math.floor(
+            timerSeconds / 60
+        );
+
+    const seconds =
+        timerSeconds % 60;
+
+    timer.textContent =
+        `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+
+/* ============================================================
+   START
+============================================================ */
+
+updateTimerDisplay();

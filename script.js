@@ -1,137 +1,81 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-    getFirestore,
-    collection,
-    addDoc,
-    getDocs,
-    getDoc,
-    doc,
-    setDoc,
-    updateDoc,
-    deleteDoc,
-    query,
-    where
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import{initializeApp}from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import{getFirestore,collection,addDoc,getDocs,getDoc,doc,setDoc,updateDoc,deleteDoc,query,where}from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBam3B7hYra1C51WBHXlcupRHx99bsJtcw",
-    authDomain: "evaluatietool-dbb5e.firebaseapp.com",
-    projectId: "evaluatietool-dbb5e",
-    storageBucket: "evaluatietool-dbb5e.firebasestorage.app",
-    messagingSenderId: "665576535622",
-    appId: "1:665576535622:web:ac29df6b1e4b8c26adfc47"
+const firebaseConfig={
+    apiKey:"AIzaSyBam3B7hYra1C51WBHXlcupRHx99bsJtcw",
+    authDomain:"evaluatietool-dbb5e.firebaseapp.com",
+    projectId:"evaluatietool-dbb5e",
+    storageBucket:"evaluatietool-dbb5e.firebasestorage.app",
+    messagingSenderId:"665576535622",
+    appId:"1:665576535622:web:ac29df6b1e4b8c26adfc47"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
 
-/* ============================================================
-   EVALUATIETOOL
-   Atheneum Brugge
+const STORAGE_KEY="atheneum_brugge_evaluatietool_v1";
+const ACCENT="#2a37b1";
+const BG="#f5f3f5";
 
-   Database: Firebase Firestore
-   ============================================================ */
-
-
-/* ============================================================
-   CONSTANTEN
-   ============================================================ */
-
-const STORAGE_KEY =
-    "atheneum_brugge_evaluatietool_v1";
-
-const ACCENT =
-    "#2a37b1";
-
-const BG =
-    "#f5f3f5";
-
-
-/* ============================================================
-   STATE
-   ============================================================ */
-
-let state = {
-    assignments: [],
-    classes: [],
-    students: [],
-    evaluations: []
+let state={
+    assignments:[],
+    classes:[],
+    students:[],
+    evaluations:[]
 };
 
+let selectedAssignmentId=null;
+let selectedClassId=null;
+let selectedStudentId=null;
 
-let selectedAssignmentId = null;
-let selectedClassId = null;
-let selectedStudentId = null;
+let editingAssignmentId=null;
+let editingClassId=null;
 
-let editingAssignmentId = null;
-let editingClassId = null;
+let currentEvaluationId=null;
+let isRetake=false;
 
-let currentEvaluationId = null;
-let isRetake = false;
+let timerSeconds=0;
+let timerInterval=null;
+let timerRunning=false;
 
-let timerSeconds = 0;
-let timerInterval = null;
-let timerRunning = false;
+let filterUnevaluated=false;
 
-let filterUnevaluated = false;
+let selectedDetailStudentId=null;
 
-```javascript
+
 /* ============================================================
    INITIALISATIE
    ============================================================ */
 
 document.addEventListener(
     "DOMContentLoaded",
-    async () => {
-
+    async()=>{
         setupNavigation();
         setupEvaluationEvents();
         setupAssignmentEvents();
         setupStudentEvents();
 
-        /*
-           Firebase is de primaire databron.
-
-           We laden NIET eerst Local Storage.
-           Eerst proberen we de online database te laden.
-        */
-
-        try {
-
+        try{
             await loadFromFirebase();
 
             setConnectionStatus(true);
 
             renderAll();
 
-            console.log(
-                "Firebase succesvol geladen."
-            );
-
-        } catch (error) {
-
+        }catch(error){
             console.error(
                 "Firebase kon niet worden geladen:",
                 error
             );
 
-            /*
-               Alleen wanneer Firebase echt niet bereikbaar is,
-               gebruiken we Local Storage als fallback.
-            */
-
-            loadLocalState();
-
             setConnectionStatus(false);
 
-            renderAll();
-
             showToast(
-                "Database kon niet worden geladen. Lokale gegevens worden gebruikt."
+                "Database kon niet worden geladen. Controleer de verbinding met Firebase."
             );
 
+            renderAll();
         }
-
     }
 );
 
@@ -140,22 +84,21 @@ document.addEventListener(
    FIREBASE — GEGEVENS LADEN
    ============================================================ */
 
-async function loadFromFirebase() {
+async function loadFromFirebase(){
 
-    const collectionNames = [
+    const collectionNames=[
         "assignments",
         "classes",
         "students",
         "evaluations"
     ];
 
-
-    const results =
+    const results=
         await Promise.all(
             collectionNames.map(
-                async collectionName => {
+                async collectionName=>{
 
-                    const snapshot =
+                    const snapshot=
                         await getDocs(
                             collection(
                                 db,
@@ -163,33 +106,23 @@ async function loadFromFirebase() {
                             )
                         );
 
-                    return {
-                        name: collectionName,
+                    return{
+                        name:collectionName,
                         data:
                             snapshot.docs.map(
-                                document => ({
-                                    id:
-                                        document.id,
+                                document=>({
+                                    id:document.id,
                                     ...document.data()
                                 })
                             )
                     };
-
                 }
             )
         );
 
-
-    results.forEach(result => {
-
-        state[result.name] =
-            result.data;
-
+    results.forEach(result=>{
+        state[result.name]=result.data;
     });
-
-
-    saveLocalState();
-
 }
 
 
@@ -197,43 +130,34 @@ async function loadFromFirebase() {
    VERBINDINGSSTATUS
    ============================================================ */
 
-function setConnectionStatus(
-    online
-) {
+function setConnectionStatus(online){
 
-    const dot =
+    const dot=
         document.getElementById(
             "connectionDot"
         );
 
-    const text =
+    const text=
         document.getElementById(
             "connectionText"
         );
 
-    if (!dot || !text) return;
+    if(!dot||!text)return;
 
+    if(online){
 
-    if (online) {
+        dot.classList.add("online");
 
-        dot.classList.add(
-            "online"
-        );
-
-        text.textContent =
+        text.textContent=
             "Online database";
 
-    } else {
+    }else{
 
-        dot.classList.remove(
-            "online"
-        );
+        dot.classList.remove("online");
 
-        text.textContent =
+        text.textContent=
             "Lokale modus";
-
     }
-
 }
 
 
@@ -241,57 +165,50 @@ function setConnectionStatus(
    LOCAL STORAGE
    ============================================================ */
 
-function loadLocalState() {
+function loadLocalState(){
 
-    try {
+    try{
 
-        const raw =
+        const raw=
             localStorage.getItem(
                 STORAGE_KEY
             );
 
-        if (!raw) return;
+        if(!raw)return;
 
-
-        const parsed =
+        const parsed=
             JSON.parse(raw);
 
-
-        state = {
-
+        state={
             assignments:
-                parsed.assignments || [],
+                parsed.assignments||[],
 
             classes:
-                parsed.classes || [],
+                parsed.classes||[],
 
             students:
-                parsed.students || [],
+                parsed.students||[],
 
             evaluations:
-                parsed.evaluations || []
-
+                parsed.evaluations||[]
         };
 
-    } catch (error) {
+    }catch(error){
 
         console.error(
             "Kon lokale gegevens niet laden:",
             error
         );
-
     }
-
 }
 
 
-function saveLocalState() {
+function saveLocalState(){
 
     localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify(state)
     );
-
 }
 
 
@@ -299,139 +216,106 @@ function saveLocalState() {
    DATABASE HELPERS — FIREBASE FIRESTORE
    ============================================================ */
 
-function createId(
-    prefix = ""
-) {
+function createId(prefix=""){
 
-    return (
-        prefix +
-        Date.now().toString(36) +
+    return(
+        prefix+
+        Date.now().toString(36)+
         Math.random()
             .toString(36)
-            .substring(2, 8)
+            .substring(2,8)
     );
-
 }
 
-
-/* ------------------------------------------------------------
-   RECORD TOEVOEGEN
-   ------------------------------------------------------------ */
 
 async function dbInsert(
     collectionName,
     object
-) {
+){
 
-    const id =
-        object.id ||
+    const id=
+        object.id||
         createId();
 
-
-    const reference =
+    const reference=
         doc(
             db,
             collectionName,
             id
         );
 
-
-    const data = {
+    const data={
         ...object,
         id
     };
-
 
     await setDoc(
         reference,
         data
     );
 
-
     return data;
-
 }
 
-
-/* ------------------------------------------------------------
-   RECORD AANPASSEN
-   ------------------------------------------------------------ */
 
 async function dbUpdate(
     collectionName,
     id,
     object
-) {
+){
 
-    const reference =
+    const reference=
         doc(
             db,
             collectionName,
             id
         );
-
 
     await updateDoc(
         reference,
         object
     );
 
-
-    return {
+    return{
         ...object,
         id
     };
-
 }
 
-
-/* ------------------------------------------------------------
-   RECORD OPHALEN
-   ------------------------------------------------------------ */
 
 async function dbGet(
     collectionName,
     id
-) {
+){
 
-    const reference =
+    const reference=
         doc(
             db,
             collectionName,
             id
         );
 
-
-    const snapshot =
+    const snapshot=
         await getDoc(
             reference
         );
 
-
-    if (!snapshot.exists()) {
-
+    if(!snapshot.exists()){
         return null;
-
     }
 
-
-    return {
-        id: snapshot.id,
+    return{
+        id:snapshot.id,
         ...snapshot.data()
     };
-
 }
 
 
-/* ------------------------------------------------------------
-   ALLE RECORDS OPHALEN
-   ------------------------------------------------------------ */
-
 async function dbGetAll(
     collectionName
-) {
+){
 
-    const snapshot =
+    const snapshot=
         await getDocs(
             collection(
                 db,
@@ -439,390 +323,509 @@ async function dbGetAll(
             )
         );
 
-
     return snapshot.docs.map(
-        document => ({
-            id: document.id,
+        document=>({
+            id:document.id,
             ...document.data()
         })
     );
-
 }
 
-
-/* ------------------------------------------------------------
-   RECORD VERWIJDEREN
-   ------------------------------------------------------------ */
 
 async function dbDelete(
     collectionName,
     id
-) {
+){
 
-    const reference =
+    const reference=
         doc(
             db,
             collectionName,
             id
         );
 
-
     await deleteDoc(
         reference
     );
-
 }
 
 
 /* ============================================================
    NAVIGATIE
-============================================================ */
+   ============================================================ */
 
-function setupNavigation() {
+function setupNavigation(){
 
-    document.querySelectorAll(".nav-button").forEach(button => {
+    document
+        .querySelectorAll(
+            ".nav-button"
+        )
+        .forEach(button=>{
 
-        button.addEventListener("click", () => {
+            button.addEventListener(
+                "click",
+                ()=>{
 
-            document
-                .querySelectorAll(".nav-button")
-                .forEach(btn =>
-                    btn.classList.remove("active")
-                );
+                    document
+                        .querySelectorAll(
+                            ".nav-button"
+                        )
+                        .forEach(btn=>
+                            btn.classList.remove(
+                                "active"
+                            )
+                        );
 
-            document
-                .querySelectorAll(".page")
-                .forEach(page =>
-                    page.classList.remove("active-page")
-                );
+                    document
+                        .querySelectorAll(
+                            ".page"
+                        )
+                        .forEach(page=>
+                            page.classList.remove(
+                                "active-page"
+                            )
+                        );
 
-            button.classList.add("active");
+                    button.classList.add(
+                        "active"
+                    );
 
-            document
-                .getElementById(button.dataset.page)
-                .classList.add("active-page");
-
+                    document
+                        .getElementById(
+                            button.dataset.page
+                        )
+                        .classList.add(
+                            "active-page"
+                        );
+                }
+            );
         });
-
-    });
-
 }
 
 
 /* ============================================================
    EVALUATIE EVENTS
-============================================================ */
+   ============================================================ */
 
-function setupEvaluationEvents() {
-
-    document
-        .getElementById("evaluationAssignment")
-        .addEventListener("change", event => {
-
-            selectedAssignmentId = event.target.value || null;
-
-            currentEvaluationId = null;
-            isRetake = false;
-
-            renderEvaluationStudents();
-            renderEvaluationForm();
-
-        });
-
+function setupEvaluationEvents(){
 
     document
-        .getElementById("evaluationClass")
-        .addEventListener("change", event => {
+        .getElementById(
+            "evaluationAssignment"
+        )
+        .addEventListener(
+            "change",
+            event=>{
 
-            selectedClassId = event.target.value || null;
+                selectedAssignmentId=
+                    event.target.value||
+                    null;
 
-            selectedStudentId = null;
+                currentEvaluationId=null;
+                isRetake=false;
 
-            renderEvaluationStudents();
-            renderEvaluationForm();
-
-        });
+                renderEvaluationStudents();
+                renderEvaluationForm();
+            }
+        );
 
 
     document
-        .getElementById("studentSearch")
-        .addEventListener("input", () => {
+        .getElementById(
+            "evaluationClass"
+        )
+        .addEventListener(
+            "change",
+            event=>{
 
-            renderEvaluationStudents();
+                selectedClassId=
+                    event.target.value||
+                    null;
 
-        });
+                selectedStudentId=null;
 
-
-    document
-        .getElementById("filterUnevaluated")
-        .addEventListener("click", event => {
-
-            filterUnevaluated = !filterUnevaluated;
-
-            event.currentTarget.classList.toggle(
-                "active",
-                filterUnevaluated
-            );
-
-            renderEvaluationStudents();
-
-        });
+                renderEvaluationStudents();
+                renderEvaluationForm();
+            }
+        );
 
 
     document
-        .getElementById("retakeButton")
-        .addEventListener("click", startRetake);
+        .getElementById(
+            "studentSearch"
+        )
+        .addEventListener(
+            "input",
+            ()=>{
+                renderEvaluationStudents();
+            }
+        );
 
 
     document
-        .getElementById("saveEvaluation")
-        .addEventListener("click", saveEvaluation);
+        .getElementById(
+            "filterUnevaluated"
+        )
+        .addEventListener(
+            "click",
+            event=>{
+
+                filterUnevaluated=
+                    !filterUnevaluated;
+
+                event.currentTarget.classList.toggle(
+                    "active",
+                    filterUnevaluated
+                );
+
+                renderEvaluationStudents();
+            }
+        );
 
 
     document
-        .getElementById("exportStudent")
-        .addEventListener("click", exportSelectedStudent);
+        .getElementById(
+            "retakeButton"
+        )
+        .addEventListener(
+            "click",
+            startRetake
+        );
 
 
     document
-        .getElementById("exportClass")
-        .addEventListener("click", exportSelectedClass);
+        .getElementById(
+            "saveEvaluation"
+        )
+        .addEventListener(
+            "click",
+            saveEvaluation
+        );
 
 
     document
-        .getElementById("toggleHistory")
-        .addEventListener("click", () => {
-
-            document
-                .getElementById("evaluationHistory")
-                .classList.toggle("hidden");
-
-        });
-
-
-    document
-        .getElementById("timerStart")
-        .addEventListener("click", startTimer);
+        .getElementById(
+            "exportStudent"
+        )
+        .addEventListener(
+            "click",
+            exportSelectedStudent
+        );
 
 
     document
-        .getElementById("timerPause")
-        .addEventListener("click", pauseTimer);
+        .getElementById(
+            "exportClass"
+        )
+        .addEventListener(
+            "click",
+            exportSelectedClass
+        );
 
 
     document
-        .getElementById("timerReset")
-        .addEventListener("click", resetTimer);
+        .getElementById(
+            "toggleHistory"
+        )
+        .addEventListener(
+            "click",
+            ()=>{
+                document
+                    .getElementById(
+                        "evaluationHistory"
+                    )
+                    .classList.toggle(
+                        "hidden"
+                    );
+            }
+        );
+
+
+    document
+        .getElementById(
+            "timerStart"
+        )
+        .addEventListener(
+            "click",
+            startTimer
+        );
+
+
+    document
+        .getElementById(
+            "timerPause"
+        )
+        .addEventListener(
+            "click",
+            pauseTimer
+        );
+
+
+    document
+        .getElementById(
+            "timerReset"
+        )
+        .addEventListener(
+            "click",
+            resetTimer
+        );
 
 }
 
 
 /* ============================================================
    EVALUATIE RENDER
-============================================================ */
+   ============================================================ */
 
-function renderEvaluationSelectors() {
+function renderEvaluationSelectors(){
 
-    const assignmentSelect =
-        document.getElementById("evaluationAssignment");
+    const assignmentSelect=
+        document.getElementById(
+            "evaluationAssignment"
+        );
 
-    const classSelect =
-        document.getElementById("evaluationClass");
+    const classSelect=
+        document.getElementById(
+            "evaluationClass"
+        );
+
+    const currentAssignment=
+        selectedAssignmentId;
+
+    const currentClass=
+        selectedClassId;
 
 
-    const currentAssignment = selectedAssignmentId;
-    const currentClass = selectedClassId;
-
-
-    assignmentSelect.innerHTML = `
-        <option value="">Kies een opdracht...</option>
+    assignmentSelect.innerHTML=`
+        <option value="">
+            Kies een opdracht...
+        </option>
     `;
 
-    state.assignments.forEach(assignment => {
 
-        assignmentSelect.innerHTML += `
-            <option value="${escapeHtml(assignment.id)}">
-                ${escapeHtml(assignment.title)}
-            </option>
-        `;
+    state.assignments.forEach(
+        assignment=>{
 
-    });
+            assignmentSelect.innerHTML+=`
+                <option value="${escapeHtml(
+                    assignment.id
+                )}">
+                    ${escapeHtml(
+                        assignment.title
+                    )}
+                </option>
+            `;
+        }
+    );
 
 
-    classSelect.innerHTML = `
-        <option value="">Kies een klas...</option>
+    classSelect.innerHTML=`
+        <option value="">
+            Kies een klas...
+        </option>
     `;
 
-    state.classes.forEach(cls => {
 
-        classSelect.innerHTML += `
-            <option value="${escapeHtml(cls.id)}">
-                ${escapeHtml(cls.name)}
-            </option>
-        `;
+    state.classes.forEach(
+        cls=>{
 
-    });
+            classSelect.innerHTML+=`
+                <option value="${escapeHtml(
+                    cls.id
+                )}">
+                    ${escapeHtml(
+                        cls.name
+                    )}
+                </option>
+            `;
+        }
+    );
 
 
-    if (currentAssignment) {
-        assignmentSelect.value = currentAssignment;
+    if(currentAssignment){
+        assignmentSelect.value=
+            currentAssignment;
     }
 
-    if (currentClass) {
-        classSelect.value = currentClass;
+    if(currentClass){
+        classSelect.value=
+            currentClass;
     }
-
 }
 
 
-function renderEvaluationStudents() {
+function renderEvaluationStudents(){
 
-    const container =
-        document.getElementById("studentList");
+    const container=
+        document.getElementById(
+            "studentList"
+        );
 
-    if (!selectedClassId) {
 
-        container.innerHTML = `
+    if(!selectedClassId){
+
+        container.innerHTML=`
             <div class="empty-state small">
                 Kies eerst een klas.
             </div>
         `;
 
         return;
-
     }
 
 
-    let students =
+    let students=
         state.students.filter(
-            student => student.class_id === selectedClassId
+            student=>
+                student.class_id===
+                selectedClassId
         );
 
 
-    const search =
+    const search=
         document
-            .getElementById("studentSearch")
+            .getElementById(
+                "studentSearch"
+            )
             .value
             .trim()
             .toLowerCase();
 
 
-    if (search) {
+    if(search){
 
-        students = students.filter(student =>
-            student.name.toLowerCase().includes(search)
-        );
-
-    }
-
-
-    if (
-        filterUnevaluated &&
-        selectedAssignmentId
-    ) {
-
-        students = students.filter(student => {
-
-            return !hasEvaluation(
-                student.id,
-                selectedAssignmentId
+        students=
+            students.filter(
+                student=>
+                    student.name
+                        .toLowerCase()
+                        .includes(search)
             );
-
-        });
-
     }
 
 
-    if (!students.length) {
+    if(
+        filterUnevaluated&&
+        selectedAssignmentId
+    ){
 
-        container.innerHTML = `
+        students=
+            students.filter(
+                student=>
+                    !hasEvaluation(
+                        student.id,
+                        selectedAssignmentId
+                    )
+            );
+    }
+
+
+    if(!students.length){
+
+        container.innerHTML=`
             <div class="empty-state small">
                 Geen leerlingen gevonden.
             </div>
         `;
 
         return;
-
     }
 
 
-    container.innerHTML = students.map(student => {
+    container.innerHTML=
+        students
+            .map(
+                student=>{
 
-        const evaluated =
-            selectedAssignmentId &&
-            hasEvaluation(
-                student.id,
-                selectedAssignmentId
-            );
-
-
-        const active =
-            student.id === selectedStudentId;
-
-
-        const retakeCount =
-            getEvaluationHistory(
-                student.id,
-                selectedAssignmentId
-            ).filter(
-                evaluation => evaluation.attempt_number > 1
-            ).length;
+                    const evaluated=
+                        selectedAssignmentId&&
+                        hasEvaluation(
+                            student.id,
+                            selectedAssignmentId
+                        );
 
 
-        return `
-            <button
-                class="student-item ${active ? "active" : ""}"
-                data-student-id="${escapeHtml(student.id)}"
-            >
+                    const active=
+                        student.id===
+                        selectedStudentId;
 
-                <span class="student-name">
-                    ${escapeHtml(student.name)}
-                </span>
 
-                ${
-                    evaluated
-                        ? `<span class="student-check">✓</span>`
-                        : ""
+                    const retakeCount=
+                        getEvaluationHistory(
+                            student.id,
+                            selectedAssignmentId
+                        ).filter(
+                            evaluation=>
+                                evaluation.attempt_number>1
+                        ).length;
+
+
+                    return`
+                        <button
+                            class="student-item ${
+                                active
+                                    ?"active"
+                                    :""
+                            }"
+                            data-student-id="${
+                                escapeHtml(
+                                    student.id
+                                )
+                            }"
+                        >
+
+                            <span class="student-name">
+                                ${escapeHtml(
+                                    student.name
+                                )}
+                            </span>
+
+                            ${
+                                evaluated
+                                    ?`<span class="student-check">✓</span>`
+                                    :""
+                            }
+
+                            ${
+                                retakeCount
+                                    ?`<span class="student-retake">
+                                        ${retakeCount}x herk.
+                                    </span>`
+                                    :""
+                            }
+
+                        </button>
+                    `;
                 }
-
-                ${
-                    retakeCount
-                        ? `<span class="student-retake">
-                            ${retakeCount}x herk.
-                           </span>`
-                        : ""
-                }
-
-            </button>
-        `;
-
-    }).join("");
+            )
+            .join("");
 
 
     container
-        .querySelectorAll(".student-item")
-        .forEach(button => {
+        .querySelectorAll(
+            ".student-item"
+        )
+        .forEach(
+            button=>{
 
-            button.addEventListener("click", () => {
+                button.addEventListener(
+                    "click",
+                    ()=>{
+                        selectedStudentId=
+                            button.dataset.studentId;
 
-                selectedStudentId =
-                    button.dataset.studentId;
+                        currentEvaluationId=null;
+                        isRetake=false;
 
-                currentEvaluationId = null;
-                isRetake = false;
+                        resetTimer();
 
-                resetTimer();
-
-                renderEvaluationStudents();
-                renderEvaluationForm();
-
-            });
-
-        });
-
+                        renderEvaluationStudents();
+                        renderEvaluationForm();
+                    }
+                );
+            }
+        );
 }
-
-
 function renderEvaluationForm() {
 
     const container =
@@ -837,7 +840,6 @@ function renderEvaluationForm() {
         state.assignments.find(
             item => item.id === selectedAssignmentId
         );
-
 
     const studentName =
         document.getElementById("selectedStudentName");
@@ -854,12 +856,15 @@ function renderEvaluationForm() {
         meta.textContent =
             "Kies een opdracht, klas en leerling.";
 
-        document.getElementById("totalScore").textContent = "—";
+        document.getElementById("totalScore").textContent =
+            "—";
 
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">✓</div>
+
                 <h3>Start een evaluatie</h3>
+
                 <p>
                     Kies links een opdracht, klas en leerling
                     om het formulier te openen.
@@ -870,17 +875,18 @@ function renderEvaluationForm() {
         renderHistory();
 
         return;
-
     }
 
 
     studentName.textContent =
         student.name;
 
+
     const cls =
         state.classes.find(
             item => item.id === student.class_id
         );
+
 
     meta.textContent =
         `${assignment.title} · ${cls ? cls.name : ""}`;
@@ -893,9 +899,9 @@ function renderEvaluationForm() {
 
         evaluation =
             state.evaluations.find(
-                item => item.id === currentEvaluationId
+                item =>
+                    item.id === currentEvaluationId
             );
-
     }
 
 
@@ -906,7 +912,6 @@ function renderEvaluationForm() {
                 selectedStudentId,
                 selectedAssignmentId
             );
-
     }
 
 
@@ -920,10 +925,15 @@ function renderEvaluationForm() {
 }
 
 
-function renderForm(assignment, evaluation) {
+function renderForm(
+    assignment,
+    evaluation
+) {
 
     const container =
-        document.getElementById("evaluationFormContainer");
+        document.getElementById(
+            "evaluationFormContainer"
+        );
 
 
     const selectedScores =
@@ -937,100 +947,144 @@ function renderForm(assignment, evaluation) {
     let html = "";
 
 
-    assignment.parameters.forEach((parameter, index) => {
+    assignment.parameters.forEach(
+        (parameter, index) => {
 
-        const selected =
-            selectedScores[parameter.id];
+            const selected =
+                selectedScores[
+                    parameter.id
+                ];
 
 
-        html += `
-            <div
-                class="parameter"
-                data-parameter-id="${escapeHtml(parameter.id)}"
-            >
+            html += `
+                <div
+                    class="parameter"
+                    data-parameter-id="${escapeHtml(
+                        parameter.id
+                    )}"
+                >
 
-                <div class="parameter-header">
+                    <div class="parameter-header">
 
-                    <div>
-                        <span class="parameter-number">
-                            CRITERIUM ${String(index + 1).padStart(2, "0")}
-                        </span>
+                        <div>
 
-                        <h3 class="parameter-title">
-                            ${escapeHtml(parameter.title)}
-                        </h3>
+                            <span class="parameter-number">
+                                CRITERIUM ${
+                                    String(index + 1)
+                                        .padStart(2, "0")
+                                }
+                            </span>
+
+                            <h3 class="parameter-title">
+                                ${escapeHtml(
+                                    parameter.title
+                                )}
+                            </h3>
+
+                        </div>
+
+
+                        <div
+                            class="parameter-score"
+                            data-score-for="${escapeHtml(
+                                parameter.id
+                            )}"
+                        >
+                            ${
+                                selected
+                                    ? `Score: ${escapeHtml(
+                                        String(
+                                            selected.score
+                                        )
+                                    )}`
+                                    : "Niet beoordeeld"
+                            }
+                        </div>
+
                     </div>
 
-                    <div class="parameter-score"
-                         data-score-for="${escapeHtml(parameter.id)}">
+
+                    <div class="levels">
+
                         ${
-                            selected
-                                ? `Score: ${escapeHtml(String(selected.score))}`
-                                : "Niet beoordeeld"
+                            parameter.levels.length
+                                ? parameter.levels
+                                    .map(level => {
+
+                                        const isSelected =
+                                            selected &&
+                                            selected.level_id ===
+                                                level.id;
+
+
+                                        return `
+                                            <label
+                                                class="level-card ${
+                                                    isSelected
+                                                        ? "selected"
+                                                        : ""
+                                                }"
+                                            >
+
+                                                <input
+                                                    type="radio"
+                                                    name="parameter-${escapeHtml(
+                                                        parameter.id
+                                                    )}"
+                                                    value="${escapeHtml(
+                                                        level.id
+                                                    )}"
+                                                    data-parameter="${escapeHtml(
+                                                        parameter.id
+                                                    )}"
+                                                    data-score="${escapeHtml(
+                                                        String(
+                                                            level.score
+                                                        )
+                                                    )}"
+                                                    ${
+                                                        isSelected
+                                                            ? "checked"
+                                                            : ""
+                                                    }
+                                                >
+
+
+                                                <div class="level-score">
+                                                    ${escapeHtml(
+                                                        String(
+                                                            level.score
+                                                        )
+                                                    )}
+                                                </div>
+
+
+                                                <div class="level-explanation">
+                                                    ${escapeHtml(
+                                                        level.explanation
+                                                    )}
+                                                </div>
+
+                                            </label>
+                                        `;
+
+                                    })
+                                    .join("")
+
+                                : `
+                                    <div class="empty-state small">
+                                        Deze parameter heeft nog geen niveaus.
+                                    </div>
+                                `
                         }
+
                     </div>
 
                 </div>
+            `;
 
-
-                <div class="levels">
-
-                    ${
-                        parameter.levels.length
-                            ? parameter.levels.map(level => {
-
-                                const isSelected =
-                                    selected &&
-                                    selected.level_id === level.id;
-
-                                return `
-                                    <label
-                                        class="level-card ${
-                                            isSelected
-                                                ? "selected"
-                                                : ""
-                                        }"
-                                    >
-
-                                        <input
-                                            type="radio"
-                                            name="parameter-${escapeHtml(parameter.id)}"
-                                            value="${escapeHtml(level.id)}"
-                                            data-parameter="${escapeHtml(parameter.id)}"
-                                            data-score="${escapeHtml(String(level.score))}"
-                                            ${
-                                                isSelected
-                                                    ? "checked"
-                                                    : ""
-                                            }
-                                        >
-
-                                        <div class="level-score">
-                                            ${escapeHtml(String(level.score))}
-                                        </div>
-
-                                        <div class="level-explanation">
-                                            ${escapeHtml(level.explanation)}
-                                        </div>
-
-                                    </label>
-                                `;
-
-                            }).join("")
-
-                            : `
-                                <div class="empty-state small">
-                                    Deze parameter heeft nog geen niveaus.
-                                </div>
-                            `
-                    }
-
-                </div>
-
-            </div>
-        `;
-
-    });
+        }
+    );
 
 
     html += `
@@ -1039,6 +1093,7 @@ function renderForm(assignment, evaluation) {
             <div class="parameter-header">
 
                 <div>
+
                     <span class="section-label">
                         FEEDBACK
                     </span>
@@ -1046,32 +1101,50 @@ function renderForm(assignment, evaluation) {
                     <h3 class="parameter-title">
                         Snelcommentaren
                     </h3>
+
                 </div>
 
             </div>
+
 
             <div class="comment-buttons">
 
                 ${
                     assignment.comments?.length
-                        ? assignment.comments.map((comment, index) => {
 
-                            const active =
-                                selectedComments.includes(comment);
+                        ? assignment.comments
+                            .map(
+                                (
+                                    comment,
+                                    index
+                                ) => {
 
-                            return `
-                                <button
-                                    type="button"
-                                    class="comment-chip ${
-                                        active ? "active" : ""
-                                    }"
-                                    data-comment-index="${index}"
-                                >
-                                    ${escapeHtml(comment)}
-                                </button>
-                            `;
+                                    const active =
+                                        selectedComments
+                                            .includes(
+                                                comment
+                                            );
 
-                        }).join("")
+
+                                    return `
+                                        <button
+                                            type="button"
+                                            class="comment-chip ${
+                                                active
+                                                    ? "active"
+                                                    : ""
+                                            }"
+                                            data-comment-index="${index}"
+                                        >
+                                            ${escapeHtml(
+                                                comment
+                                            )}
+                                        </button>
+                                    `;
+
+                                }
+                            )
+                            .join("")
 
                         : `
                             <span class="muted">
@@ -1087,105 +1160,147 @@ function renderForm(assignment, evaluation) {
                 Feedback
             </label>
 
+
             <textarea
                 id="feedbackText"
                 placeholder="Schrijf hier je feedback..."
-            >${escapeHtml(evaluation?.feedback || "")}</textarea>
+            >${escapeHtml(
+                evaluation?.feedback || ""
+            )}</textarea>
 
         </div>
     `;
 
 
-    container.innerHTML = html;
+    container.innerHTML =
+        html;
 
 
     container
-        .querySelectorAll(".level-card input")
+        .querySelectorAll(
+            ".level-card input"
+        )
         .forEach(input => {
 
-            input.addEventListener("change", () => {
+            input.addEventListener(
+                "change",
+                () => {
 
-                container
-                    .querySelectorAll(
-                        `[name="${input.name}"]`
-                    )
-                    .forEach(other => {
+                    container
+                        .querySelectorAll(
+                            `[name="${input.name}"]`
+                        )
+                        .forEach(
+                            other => {
 
-                        other
-                            .closest(".level-card")
-                            .classList.remove("selected");
+                                other
+                                    .closest(
+                                        ".level-card"
+                                    )
+                                    .classList.remove(
+                                        "selected"
+                                    );
 
-                    });
-
-
-                input
-                    .closest(".level-card")
-                    .classList.add("selected");
-
-
-                const scoreElement =
-                    document.querySelector(
-                        `[data-score-for="${input.dataset.parameter}"]`
-                    );
+                            }
+                        );
 
 
-                scoreElement.textContent =
-                    `Score: ${input.dataset.score}`;
+                    input
+                        .closest(
+                            ".level-card"
+                        )
+                        .classList.add(
+                            "selected"
+                        );
 
 
-                updateTotalScore();
+                    const scoreElement =
+                        document.querySelector(
+                            `[data-score-for="${input.dataset.parameter}"]`
+                        );
 
-            });
+
+                    scoreElement.textContent =
+                        `Score: ${input.dataset.score}`;
+
+
+                    updateTotalScore();
+
+                }
+            );
 
         });
 
 
     container
-        .querySelectorAll(".comment-chip")
-        .forEach(button => {
+        .querySelectorAll(
+            ".comment-chip"
+        )
+        .forEach(
+            button => {
 
-            button.addEventListener("click", () => {
+                button.addEventListener(
+                    "click",
+                    () => {
 
-                const comment =
-                    assignment.comments[
-                        Number(button.dataset.commentIndex)
-                    ];
-
-
-                const textarea =
-                    document.getElementById("feedbackText");
-
-
-                button.classList.toggle("active");
-
-
-                const selectedCommentsNow =
-                    Array.from(
-                        container.querySelectorAll(
-                            ".comment-chip.active"
-                        )
-                    ).map(item =>
-                        assignment.comments[
-                            Number(item.dataset.commentIndex)
-                        ]
-                    );
+                        const comment =
+                            assignment.comments[
+                                Number(
+                                    button.dataset
+                                        .commentIndex
+                                )
+                            ];
 
 
-                textarea.value =
-                    selectedCommentsNow.join(" ") +
-                    (
-                        selectedCommentsNow.length &&
-                        textarea.value &&
-                        !selectedCommentsNow.some(
-                            item => textarea.value === item
-                        )
-                            ? " " + textarea.value
-                            : ""
-                    );
+                        const textarea =
+                            document.getElementById(
+                                "feedbackText"
+                            );
 
-            });
 
-        });
+                        button.classList.toggle(
+                            "active"
+                        );
+
+
+                        const selectedCommentsNow =
+                            Array.from(
+                                container.querySelectorAll(
+                                    ".comment-chip.active"
+                                )
+                            ).map(
+                                item =>
+                                    assignment.comments[
+                                        Number(
+                                            item.dataset
+                                                .commentIndex
+                                        )
+                                    ]
+                            );
+
+
+                        textarea.value =
+                            selectedCommentsNow.join(
+                                " "
+                            ) +
+                            (
+                                selectedCommentsNow.length &&
+                                textarea.value &&
+                                !selectedCommentsNow.some(
+                                    item =>
+                                        textarea.value ===
+                                        item
+                                )
+                                    ? " " +
+                                      textarea.value
+                                    : ""
+                            );
+
+                    }
+                );
+
+            }
+        );
 
 
     updateTotalScore();
@@ -1197,112 +1312,118 @@ function updateTotalScore() {
 
     const assignment =
         state.assignments.find(
-            item => item.id === selectedAssignmentId
+            item =>
+                item.id ===
+                selectedAssignmentId
         );
 
-    if (!assignment) return;
 
-    const totalElement =
-        document.getElementById("totalScore");
-
-    let totalScore = 0;
-    let maxScore = 0;
-    let evaluatedCount = 0;
-
-    /*
-       Elk criterium (.parameter) telt even zwaar.
-
-       De behaalde score komt van het geselecteerde niveau.
-       De maximumscore komt van het hoogste niveau binnen
-       dat criterium.
-    */
-
-    document
-        .querySelectorAll(
-            "#evaluationFormContainer .parameter"
-        )
-        .forEach(parameter => {
-
-            const inputs =
-                parameter.querySelectorAll(
-                    'input[type="radio"]'
-                );
-
-            if (!inputs.length) return;
-
-            let criterionMax = 0;
-
-            inputs.forEach(input => {
-
-                const score =
-                    Number(input.dataset.score);
-
-                if (!Number.isNaN(score)) {
-
-                    criterionMax =
-                        Math.max(
-                            criterionMax,
-                            score
-                        );
-
-                }
-
-            });
-
-            maxScore += criterionMax;
+    const total =
+        document.getElementById(
+            "totalScore"
+        );
 
 
-            const selected =
-                parameter.querySelector(
-                    'input[type="radio"]:checked'
-                );
-
-            if (selected) {
-
-                const score =
-                    Number(selected.dataset.score);
-
-                if (!Number.isNaN(score)) {
-
-                    totalScore += score;
-                    evaluatedCount++;
-
-                }
-
-            }
-
-        });
-
-
-    /*
-       Nog geen enkele beoordeling:
-       toon 0 / maximumscore.
-    */
-
-    if (evaluatedCount === 0) {
-
-        totalElement.textContent =
-            `0 / ${maxScore}`;
-
+    if (!assignment || !total) {
         return;
-
     }
 
 
-    /*
-       Absolute eindscore:
-       behaalde punten / maximaal haalbare punten
-    */
+    let achievedScore = 0;
+    let maximumScore = 0;
+    let evaluatedCount = 0;
 
-    totalElement.textContent =
-        `${totalScore} / ${maxScore}`;
+
+    assignment.parameters.forEach(
+        parameter => {
+
+            const levels =
+                parameter.levels || [];
+
+
+            /*
+               Het maximum van dit criterium is
+               de hoogste score die eraan gekoppeld is.
+            */
+
+            if (levels.length) {
+
+                const criterionMaximum =
+                    Math.max(
+                        ...levels.map(
+                            level =>
+                                Number(
+                                    level.score
+                                )
+                        )
+                    );
+
+
+                maximumScore +=
+                    criterionMaximum;
+
+            }
+
+
+            /*
+               Kijk welke score momenteel
+               geselecteerd is.
+            */
+
+            const input =
+                document.querySelector(
+                    `input[name="parameter-${parameter.id}"]:checked`
+                );
+
+
+            if (!input) {
+                return;
+            }
+
+
+            const score =
+                Number(
+                    input.dataset.score
+                );
+
+
+            if (
+                !Number.isNaN(score)
+            ) {
+
+                achievedScore +=
+                    score;
+
+                evaluatedCount++;
+
+            }
+
+        }
+    );
+
+
+    if (!evaluatedCount) {
+
+        total.textContent =
+            "—";
+
+        return;
+    }
+
+
+    total.textContent =
+        `${achievedScore} / ${maximumScore}`;
 
 }
+
+
 function collectFormData() {
 
     const assignment =
         state.assignments.find(
-            item => item.id === selectedAssignmentId
+            item =>
+                item.id ===
+                selectedAssignmentId
         );
 
 
@@ -1311,36 +1432,55 @@ function collectFormData() {
 
     if (assignment) {
 
-        assignment.parameters.forEach(parameter => {
+        assignment.parameters.forEach(
+            parameter => {
 
-            const input =
-                document.querySelector(
-                    `input[name="parameter-${parameter.id}"]:checked`
-                );
-
-
-            if (!input) return;
+                const input =
+                    document.querySelector(
+                        `input[name="parameter-${parameter.id}"]:checked`
+                    );
 
 
-            const level =
-                parameter.levels.find(
-                    item => item.id === input.value
-                );
+                if (!input) {
+                    return;
+                }
 
 
-            if (!level) return;
+                const level =
+                    parameter.levels.find(
+                        item =>
+                            item.id ===
+                            input.value
+                    );
 
 
-            scores[parameter.id] = {
+                if (!level) {
+                    return;
+                }
 
-                level_id: level.id,
-                score: Number(level.score),
-                level_title: level.title || "",
-                explanation: level.explanation
 
-            };
+                scores[
+                    parameter.id
+                ] = {
 
-        });
+                    level_id:
+                        level.id,
+
+                    score:
+                        Number(
+                            level.score
+                        ),
+
+                    level_title:
+                        level.title || "",
+
+                    explanation:
+                        level.explanation
+
+                };
+
+            }
+        );
 
     }
 
@@ -1350,32 +1490,36 @@ function collectFormData() {
             document.querySelectorAll(
                 ".comment-chip.active"
             )
-        ).map(button => {
+        ).map(
+            button => {
 
-            return assignment.comments[
-                Number(button.dataset.commentIndex)
-            ];
+                return assignment.comments[
+                    Number(
+                        button.dataset
+                            .commentIndex
+                    )
+                ];
 
-        });
+            }
+        );
+
+
+    const feedback =
+        document
+            .getElementById(
+                "feedbackText"
+            )
+            ?.value
+            .trim() || "";
 
 
     return {
-
         scores,
-
         comments,
-
-        feedback:
-            document.getElementById("feedbackText")?.value || "",
-
-        duration_seconds:
-            timerSeconds
-
+        feedback
     };
 
 }
-
-
 /* ============================================================
    EVALUATIE OPSLAAN
 ============================================================ */
@@ -1552,13 +1696,17 @@ async function saveEvaluation() {
                 result
             );
 
+
             currentEvaluationId =
                 result.id;
 
         }
 
 
-        saveLocalState();
+        /*
+           Firebase is de enige permanente opslag.
+           Geen Local Storage meer.
+        */
 
 
         isRetake = false;
@@ -1573,7 +1721,10 @@ async function saveEvaluation() {
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Firebase fout bij opslaan evaluatie:",
+            error
+        );
 
         showToast(
             "Opslaan mislukt: " +
@@ -1637,8 +1788,14 @@ function getEvaluationHistory(
         )
         .sort(
             (a, b) =>
-                new Date(b.created_at || b.evaluation_date) -
-                new Date(a.created_at || a.evaluation_date)
+                new Date(
+                    b.created_at ||
+                    b.evaluation_date
+                ) -
+                new Date(
+                    a.created_at ||
+                    a.evaluation_date
+                )
         );
 
 }
@@ -1672,7 +1829,10 @@ function hasEvaluation(
 }
 
 
-```javascript
+/* ============================================================
+   ABSOLUTE EVALUATIESCORE
+============================================================ */
+
 function calculateEvaluationScore(
     evaluation,
     assignment
@@ -1683,77 +1843,101 @@ function calculateEvaluationScore(
         !assignment ||
         !evaluation.scores
     ) {
+
         return null;
+
     }
+
 
     let totalScore = 0;
     let maxScore = 0;
     let evaluatedCount = 0;
 
-    assignment.parameters.forEach(parameter => {
 
-        /*
-           Bepaal de hoogste score die binnen dit
-           criterium mogelijk is.
-        */
+    assignment.parameters.forEach(
+        parameter => {
 
-        const criterionMax =
-            parameter.levels && parameter.levels.length
-                ? Math.max(
-                    ...parameter.levels.map(level =>
-                        Number(level.score)
-                    )
-                )
-                : 0;
-
-        maxScore += criterionMax;
+            const levels =
+                parameter.levels || [];
 
 
-        /*
-           Kijk of dit criterium beoordeeld is.
-        */
+            /*
+               Hoogste beschikbare niveau =
+               maximaal te behalen score voor dit criterium.
+            */
 
-        const selected =
-            evaluation.scores[parameter.id];
+            if (levels.length) {
 
-        if (
-            selected &&
-            typeof selected.score === "number"
-        ) {
+                const criterionMax =
+                    Math.max(
+                        ...levels.map(
+                            level =>
+                                Number(level.score)
+                        )
+                    );
 
-            totalScore += selected.score;
-            evaluatedCount++;
+
+                maxScore +=
+                    criterionMax;
+
+            }
+
+
+            /*
+               Geselecteerde score voor dit criterium.
+            */
+
+            const selected =
+                evaluation.scores[
+                    parameter.id
+                ];
+
+
+            if (
+                selected &&
+                typeof selected.score === "number"
+            ) {
+
+                totalScore +=
+                    selected.score;
+
+                evaluatedCount++;
+
+            }
 
         }
+    );
 
-    });
 
+    if (!evaluatedCount) {
 
-    /*
-       Geen enkele score ingevuld.
-    */
-
-    if (evaluatedCount === 0) {
         return null;
+
     }
 
 
-    /*
-       Geef de absolute score terug.
-       Bijvoorbeeld: 9 / 12
-    */
-
     return {
-        total: totalScore,
-        max: maxScore,
-        evaluated: evaluatedCount,
-        totalCriteria: assignment.parameters.length
+
+        total:
+            totalScore,
+
+        max:
+            maxScore,
+
+        evaluated:
+            evaluatedCount,
+
+        totalCriteria:
+            assignment.parameters.length
+
     };
 
 }
-```
 
 
+/* ============================================================
+   EVALUATIEGESCHIEDENIS RENDEREN
+============================================================ */
 
 function renderHistory() {
 
@@ -1788,7 +1972,8 @@ function renderHistory() {
 
     const assignment =
         state.assignments.find(
-            item => item.id === selectedAssignmentId
+            item =>
+                item.id === selectedAssignmentId
         );
 
 
@@ -1806,163 +1991,195 @@ function renderHistory() {
 
 
     container.innerHTML =
-        history.map(evaluation => {
+        history.map(
+            evaluation => {
 
-            const score =
-                calculateEvaluationScore(
-                    evaluation,
-                    assignment
-                );
-
-
-            const date =
-                formatDate(
-                    evaluation.evaluation_date ||
-                    evaluation.created_at
-                );
+                const score =
+                    calculateEvaluationScore(
+                        evaluation,
+                        assignment
+                    );
 
 
-            return `
-                <div class="history-item">
+                const date =
+                    formatDate(
+                        evaluation.evaluation_date ||
+                        evaluation.created_at
+                    );
 
-                    <div class="history-date">
-                        <strong>
-                            ${date}
-                        </strong>
 
-                        <div class="history-attempt">
-                            ${
-                                evaluation.attempt_number > 1
-                                    ? "Herkansing"
-                                    : "Eerste evaluatie"
-                            }
+                return `
+                    <div class="history-item">
+
+                        <div class="history-date">
+
+                            <strong>
+                                ${date}
+                            </strong>
+
+                            <div class="history-attempt">
+
+                                ${
+                                    evaluation.attempt_number > 1
+                                        ? "Herkansing"
+                                        : "Eerste evaluatie"
+                                }
+
+                            </div>
+
                         </div>
+
+
+                        <div class="history-score">
+
+                            ${
+                                score === null
+                                    ? "—"
+                                    : `${score.total} / ${score.max}`
+                            }
+
+                        </div>
+
+
+                        <div class="history-actions">
+
+                            <button
+                                data-history-edit="${escapeHtml(
+                                    evaluation.id
+                                )}"
+                            >
+                                Bewerken
+                            </button>
+
+
+                            <button
+                                data-history-delete="${escapeHtml(
+                                    evaluation.id
+                                )}"
+                            >
+                                Verwijderen
+                            </button>
+
+                        </div>
+
                     </div>
+                `;
 
-                    <div class="history-score">
-                       ${
-    score === null
-        ? "—"
-        : `${score.total} / ${score.max}`
-}
-                        }
-                    </div>
-
-                    <div class="history-actions">
-
-                        <button
-                            data-history-edit="${escapeHtml(evaluation.id)}"
-                        >
-                            Bewerken
-                        </button>
-
-                        <button
-                            data-history-delete="${escapeHtml(evaluation.id)}"
-                        >
-                            Verwijderen
-                        </button>
-
-                    </div>
-
-                </div>
-            `;
-
-        }).join("");
+            }
+        ).join("");
 
 
     container
         .querySelectorAll(
             "[data-history-edit]"
         )
-        .forEach(button => {
+        .forEach(
+            button => {
 
-            button.addEventListener("click", () => {
+                button.addEventListener(
+                    "click",
+                    () => {
 
-                currentEvaluationId =
-                    button.dataset.historyEdit;
+                        currentEvaluationId =
+                            button.dataset.historyEdit;
 
-                isRetake = false;
+                        isRetake = false;
 
-                renderEvaluationForm();
+                        renderEvaluationForm();
 
-            });
+                    }
+                );
 
-        });
+            }
+        );
 
 
     container
         .querySelectorAll(
             "[data-history-delete]"
         )
-        .forEach(button => {
+        .forEach(
+            button => {
 
-            button.addEventListener("click", async () => {
+                button.addEventListener(
+                    "click",
+                    async () => {
 
-                const evaluation =
-                    state.evaluations.find(
-                        item =>
-                            item.id ===
-                            button.dataset.historyDelete
-                    );
-
-
-                if (!evaluation) return;
-
-
-                if (
-                    !confirm(
-                        "Deze evaluatie definitief verwijderen?"
-                    )
-                ) return;
+                        const evaluation =
+                            state.evaluations.find(
+                                item =>
+                                    item.id ===
+                                    button.dataset
+                                        .historyDelete
+                            );
 
 
-                try {
-
-                    await dbDelete(
-                        "evaluations",
-                        evaluation.id
-                    );
+                        if (!evaluation) {
+                            return;
+                        }
 
 
-                    state.evaluations =
-                        state.evaluations.filter(
-                            item =>
-                                item.id !== evaluation.id
-                        );
+                        if (
+                            !confirm(
+                                "Deze evaluatie definitief verwijderen?"
+                            )
+                        ) {
+                            return;
+                        }
 
 
-                    if (
-                        currentEvaluationId ===
-                        evaluation.id
-                    ) {
+                        try {
 
-                        currentEvaluationId = null;
+                            await dbDelete(
+                                "evaluations",
+                                evaluation.id
+                            );
+
+
+                            state.evaluations =
+                                state.evaluations.filter(
+                                    item =>
+                                        item.id !==
+                                        evaluation.id
+                                );
+
+
+                            if (
+                                currentEvaluationId ===
+                                evaluation.id
+                            ) {
+
+                                currentEvaluationId =
+                                    null;
+
+                            }
+
+
+                            renderEvaluationStudents();
+                            renderEvaluationForm();
+
+                            showToast(
+                                "Evaluatie verwijderd."
+                            );
+
+                        } catch (error) {
+
+                            console.error(
+                                "Firebase fout bij verwijderen evaluatie:",
+                                error
+                            );
+
+                            showToast(
+                                "Verwijderen mislukt."
+                            );
+
+                        }
 
                     }
+                );
 
-
-                    saveLocalState();
-
-                    renderEvaluationStudents();
-                    renderEvaluationForm();
-
-                    showToast(
-                        "Evaluatie verwijderd."
-                    );
-
-                } catch (error) {
-
-                    console.error(error);
-
-                    showToast(
-                        "Verwijderen mislukt."
-                    );
-
-                }
-
-            });
-
-        });
+            }
+        );
 
 }
 
@@ -1974,14 +2191,25 @@ function renderHistory() {
 function updateTimerDisplay() {
 
     const minutes =
-        Math.floor(timerSeconds / 60)
-            .toString()
-            .padStart(2, "0");
+        Math.floor(
+            timerSeconds / 60
+        )
+        .toString()
+        .padStart(
+            2,
+            "0"
+        );
+
 
     const seconds =
-        (timerSeconds % 60)
-            .toString()
-            .padStart(2, "0");
+        (
+            timerSeconds % 60
+        )
+        .toString()
+        .padStart(
+            2,
+            "0"
+        );
 
 
     document.getElementById(
@@ -1994,18 +2222,25 @@ function updateTimerDisplay() {
 
 function startTimer() {
 
-    if (timerRunning) return;
+    if (timerRunning) {
+        return;
+    }
+
 
     timerRunning = true;
 
+
     timerInterval =
-        setInterval(() => {
+        setInterval(
+            () => {
 
-            timerSeconds++;
+                timerSeconds++;
 
-            updateTimerDisplay();
+                updateTimerDisplay();
 
-        }, 1000);
+            },
+            1000
+        );
 
 }
 
@@ -2013,6 +2248,7 @@ function startTimer() {
 function pauseTimer() {
 
     timerRunning = false;
+
 
     clearInterval(
         timerInterval
@@ -2039,7 +2275,9 @@ function resetTimer() {
 function setupAssignmentEvents() {
 
     document
-        .getElementById("newAssignment")
+        .getElementById(
+            "newAssignment"
+        )
         .addEventListener(
             "click",
             createNewAssignment
@@ -2047,7 +2285,9 @@ function setupAssignmentEvents() {
 
 
     document
-        .getElementById("addComment")
+        .getElementById(
+            "addComment"
+        )
         .addEventListener(
             "click",
             addCommentField
@@ -2055,7 +2295,9 @@ function setupAssignmentEvents() {
 
 
     document
-        .getElementById("addParameter")
+        .getElementById(
+            "addParameter"
+        )
         .addEventListener(
             "click",
             addParameter
@@ -2063,7 +2305,9 @@ function setupAssignmentEvents() {
 
 
     document
-        .getElementById("saveAssignment")
+        .getElementById(
+            "saveAssignment"
+        )
         .addEventListener(
             "click",
             saveAssignment
@@ -2071,7 +2315,9 @@ function setupAssignmentEvents() {
 
 
     document
-        .getElementById("duplicateAssignment")
+        .getElementById(
+            "duplicateAssignment"
+        )
         .addEventListener(
             "click",
             duplicateAssignment
@@ -2079,7 +2325,9 @@ function setupAssignmentEvents() {
 
 
     document
-        .getElementById("deleteAssignment")
+        .getElementById(
+            "deleteAssignment"
+        )
         .addEventListener(
             "click",
             deleteAssignment
@@ -2097,7 +2345,9 @@ function createNewAssignment() {
     const assignment = {
 
         id:
-            createId("assignment_"),
+            createId(
+                "assignment_"
+            ),
 
         title:
             "Nieuwe opdracht",
@@ -2111,7 +2361,9 @@ function createNewAssignment() {
                 {
 
                     id:
-                        createId("parameter_"),
+                        createId(
+                            "parameter_"
+                        ),
 
                     title:
                         "Parameter 1",
@@ -2121,7 +2373,9 @@ function createNewAssignment() {
 
                             {
                                 id:
-                                    createId("level_"),
+                                    createId(
+                                        "level_"
+                                    ),
 
                                 score:
                                     4,
@@ -2136,7 +2390,9 @@ function createNewAssignment() {
 
                             {
                                 id:
-                                    createId("level_"),
+                                    createId(
+                                        "level_"
+                                    ),
 
                                 score:
                                     3,
@@ -2151,7 +2407,9 @@ function createNewAssignment() {
 
                             {
                                 id:
-                                    createId("level_"),
+                                    createId(
+                                        "level_"
+                                    ),
 
                                 score:
                                     2,
@@ -2166,7 +2424,9 @@ function createNewAssignment() {
 
                             {
                                 id:
-                                    createId("level_"),
+                                    createId(
+                                        "level_"
+                                    ),
 
                                 score:
                                     1,
@@ -2198,7 +2458,6 @@ function createNewAssignment() {
 
 
     renderAssignments();
-
     openAssignmentEditor();
 
 }
@@ -2211,34 +2470,46 @@ function createNewAssignment() {
 function openAssignmentEditor() {
 
     const assignment =
-        state.assignments.find(
-            item =>
-                item.id === editingAssignmentId
+        getEditingAssignment();
+
+
+    if (!assignment) {
+        return;
+    }
+
+
+    const editor =
+        document.getElementById(
+            "assignmentEditor"
         );
 
 
-    if (!assignment) return;
+    const empty =
+        document.getElementById(
+            "assignmentEditorEmpty"
+        );
 
 
-    document
-        .getElementById("assignmentEditorEmpty")
-        .classList.add("hidden");
+    editor.classList.remove(
+        "hidden"
+    );
 
 
-    document
-        .getElementById("assignmentEditor")
-        .classList.remove("hidden");
+    empty.classList.add(
+        "hidden"
+    );
 
 
-    document
-        .getElementById("assignmentTitle")
-        .value =
-            assignment.title || "";
+    document.getElementById(
+        "assignmentTitle"
+    ).value =
+        assignment.title || "";
 
 
     renderCommentsBuilder(
         assignment
     );
+
 
     renderParametersBuilder(
         assignment
@@ -2257,92 +2528,112 @@ function renderCommentsBuilder(
         );
 
 
+    if (!container) {
+        return;
+    }
+
+
     container.innerHTML =
-        assignment.comments.map(
-            (comment, index) => `
+        assignment.comments
+            .map(
+                (comment, index) => `
 
-                <div class="comment-builder">
+                    <div class="comment-builder">
 
-                    <input
-                        type="text"
-                        value="${escapeHtml(comment)}"
-                        data-comment="${index}"
-                        placeholder="Standaardcommentaar..."
-                    >
+                        <input
+                            type="text"
+                            value="${escapeHtml(
+                                comment
+                            )}"
+                            data-comment-index="${index}"
+                        >
 
-                    <button
-                        class="icon-button"
-                        type="button"
-                        data-delete-comment="${index}"
-                    >
-                        ×
-                    </button>
+                        <button
+                            type="button"
+                            class="icon-button"
+                            data-delete-comment="${index}"
+                        >
+                            ×
+                        </button>
 
-                </div>
+                    </div>
 
-            `
-        ).join("");
+                `
+            )
+            .join("");
 
 
     container
         .querySelectorAll(
-            "[data-comment]"
+            "[data-comment-index]"
         )
-        .forEach(input => {
+        .forEach(
+            input => {
 
-            input.addEventListener(
-                "input",
-                () => {
+                input.addEventListener(
+                    "input",
+                    () => {
 
-                    assignment.comments[
-                        Number(input.dataset.comment)
-                    ] =
-                        input.value;
+                        assignment.comments[
+                            Number(
+                                input.dataset
+                                    .commentIndex
+                            )
+                        ] =
+                            input.value;
 
-                }
-            );
+                    }
+                );
 
-        });
+            }
+        );
 
 
     container
         .querySelectorAll(
             "[data-delete-comment]"
         )
-        .forEach(button => {
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                "click",
-                () => {
+                button.addEventListener(
+                    "click",
+                    () => {
 
-                    assignment.comments.splice(
-                        Number(
-                            button.dataset.deleteComment
-                        ),
-                        1
-                    );
+                        assignment.comments.splice(
+                            Number(
+                                button.dataset
+                                    .deleteComment
+                            ),
+                            1
+                        );
 
-                    renderCommentsBuilder(
-                        assignment
-                    );
+                        renderCommentsBuilder(
+                            assignment
+                        );
 
-                }
-            );
+                    }
+                );
 
-        });
+            }
+        );
 
 }
-
+/* ============================================================
+   COMMENTAAR TOEVOEGEN
+============================================================ */
 
 function addCommentField() {
 
     const assignment =
         getEditingAssignment();
 
-    if (!assignment) return;
+    if (!assignment) {
+        return;
+    }
 
     assignment.comments.push(
-        "Nieuw standaardcommentaar"
+        ""
     );
 
     renderCommentsBuilder(
@@ -2351,6 +2642,10 @@ function addCommentField() {
 
 }
 
+
+/* ============================================================
+   PARAMETERS BUILDER
+============================================================ */
 
 function renderParametersBuilder(
     assignment
@@ -2361,453 +2656,653 @@ function renderParametersBuilder(
             "parametersBuilder"
         );
 
+    if (!container) {
+        return;
+    }
+
 
     container.innerHTML =
-        assignment.parameters.map(
-            (parameter, parameterIndex) => {
-
-                return `
+        assignment.parameters
+            .map(
+                (parameter, parameterIndex) => `
 
                     <div
                         class="parameter-builder"
-                        data-parameter="${escapeHtml(parameter.id)}"
+                        data-parameter-id="${escapeHtml(
+                            parameter.id
+                        )}"
                     >
 
-                        <div class="parameter-builder-header">
+                        <div class="builder-header">
 
-                            <span class="parameter-drag">
-                                ☷
-                            </span>
+                            <div>
 
-                            <input
-                                class="parameter-title-input"
-                                value="${escapeHtml(parameter.title)}"
-                                data-parameter-title="${parameterIndex}"
+                                <span class="section-label">
+                                    CRITERIUM ${
+                                        String(
+                                            parameterIndex + 1
+                                        ).padStart(
+                                            2,
+                                            "0"
+                                        )
+                                    }
+                                </span>
+
+                                <input
+                                    type="text"
+                                    class="parameter-title-input"
+                                    value="${escapeHtml(
+                                        parameter.title || ""
+                                    )}"
+                                    placeholder="Naam van criterium"
+                                >
+
+                            </div>
+
+
+                            <button
+                                type="button"
+                                class="danger-button"
+                                data-delete-parameter="${escapeHtml(
+                                    parameter.id
+                                )}"
                             >
+                                Verwijderen
+                            </button>
 
-                            <div class="move-buttons">
+                        </div>
+
+
+                        <div class="levels-builder">
+
+                            <div class="levels-builder-header">
+
+                                <strong>
+                                    Niveaus
+                                </strong>
 
                                 <button
-                                    class="move-button"
-                                    data-param-up="${parameterIndex}"
                                     type="button"
+                                    class="secondary-button"
+                                    data-add-level="${escapeHtml(
+                                        parameter.id
+                                    )}"
                                 >
-                                    ↑
-                                </button>
-
-                                <button
-                                    class="move-button"
-                                    data-param-down="${parameterIndex}"
-                                    type="button"
-                                >
-                                    ↓
+                                    + Niveau
                                 </button>
 
                             </div>
 
-                            <button
-                                class="icon-button"
-                                data-delete-parameter="${parameterIndex}"
-                                type="button"
-                            >
-                                ×
-                            </button>
 
-                        </div>
+                            <div class="level-builder-list">
 
+                                ${
+                                    (parameter.levels || [])
+                                        .map(
+                                            (
+                                                level,
+                                                levelIndex
+                                            ) => `
 
-                        <div class="level-builder-list">
+                                                <div
+                                                    class="level-builder"
+                                                    data-level-id="${escapeHtml(
+                                                        level.id
+                                                    )}"
+                                                >
 
-                            ${
-                                parameter.levels.map(
-                                    (level, levelIndex) => `
-
-                                        <div class="level-builder">
-
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                value="${escapeHtml(String(level.score))}"
-                                                data-level-score="${parameterIndex},${levelIndex}"
-                                            >
-
-                                            <textarea
-                                                data-level-explanation="${parameterIndex},${levelIndex}"
-                                                placeholder="Uitleg van dit niveau..."
-                                            >${escapeHtml(level.explanation)}</textarea>
-
-                                            <button
-                                                class="icon-button"
-                                                data-delete-level="${parameterIndex},${levelIndex}"
-                                                type="button"
-                                            >
-                                                ×
-                                            </button>
-
-                                        </div>
-
-                                    `
-                                ).join("")
-                            }
-
-                            <button
-                                class="small-primary"
-                                data-add-level="${parameterIndex}"
-                                type="button"
-                            >
-                                + Niveau
-                            </button>
-
-                        </div>
+                                                    <div class="level-number">
+                                                        ${levelIndex + 1}
+                                                    </div>
 
 
-                        <div class="parameter-footer">
+                                                    <div class="level-score-input">
 
-                            <div class="muted">
-                                ${parameter.levels.length}
-                                niveau${parameter.levels.length === 1 ? "" : "s"}
+                                                        <label>
+                                                            Score
+                                                        </label>
+
+                                                        <input
+                                                            type="number"
+                                                            value="${escapeHtml(
+                                                                String(
+                                                                    level.score ?? ""
+                                                                )
+                                                            )}"
+                                                            data-level-score
+                                                        >
+
+                                                    </div>
+
+
+                                                    <div class="level-title-input">
+
+                                                        <label>
+                                                            Titel
+                                                        </label>
+
+                                                        <input
+                                                            type="text"
+                                                            value="${escapeHtml(
+                                                                level.title || ""
+                                                            )}"
+                                                            data-level-title
+                                                            placeholder="Bijv. Uitstekend"
+                                                        >
+
+                                                    </div>
+
+
+                                                    <div class="level-explanation-input">
+
+                                                        <label>
+                                                            Omschrijving
+                                                        </label>
+
+                                                        <input
+                                                            type="text"
+                                                            value="${escapeHtml(
+                                                                level.explanation || ""
+                                                            )}"
+                                                            data-level-explanation
+                                                            placeholder="Omschrijving van dit niveau"
+                                                        >
+
+                                                    </div>
+
+
+                                                    <button
+                                                        type="button"
+                                                        class="icon-button danger"
+                                                        data-delete-level="${escapeHtml(
+                                                            parameter.id
+                                                        )}"
+                                                        data-level-id="${escapeHtml(
+                                                            level.id
+                                                        )}"
+                                                    >
+                                                        ×
+                                                    </button>
+
+                                                </div>
+
+                                            `
+                                        )
+                                        .join("")
+                                }
+
                             </div>
 
                         </div>
 
                     </div>
 
-                `;
+                `
+            )
+            .join("");
+
+
+    /*
+       Titel van criterium bijwerken
+    */
+
+    container
+        .querySelectorAll(
+            ".parameter-title-input"
+        )
+        .forEach(
+            input => {
+
+                input.addEventListener(
+                    "input",
+                    () => {
+
+                        const builder =
+                            input.closest(
+                                ".parameter-builder"
+                            );
+
+                        const parameter =
+                            assignment.parameters.find(
+                                item =>
+                                    item.id ===
+                                    builder.dataset
+                                        .parameterId
+                            );
+
+                        if (parameter) {
+
+                            parameter.title =
+                                input.value;
+
+                        }
+
+                    }
+                );
 
             }
-        ).join("");
+        );
 
 
-    /* parameter titles */
-
-    container
-        .querySelectorAll(
-            "[data-parameter-title]"
-        )
-        .forEach(input => {
-
-            input.addEventListener(
-                "input",
-                () => {
-
-                    assignment.parameters[
-                        Number(input.dataset.parameterTitle)
-                    ].title =
-                        input.value;
-
-                }
-            );
-
-        });
-
-
-    /* score */
+    /*
+       Score / titel / omschrijving van niveau bijwerken
+    */
 
     container
         .querySelectorAll(
-            "[data-level-score]"
+            ".level-builder"
         )
-        .forEach(input => {
+        .forEach(
+            levelElement => {
 
-            input.addEventListener(
-                "input",
-                () => {
-
-                    const [
-                        p,
-                        l
-                    ] =
-                        input.dataset.levelScore
-                            .split(",")
-                            .map(Number);
+                const parameterElement =
+                    levelElement.closest(
+                        ".parameter-builder"
+                    );
 
 
-                    assignment.parameters[p]
-                        .levels[l]
-                        .score =
-                            Number(input.value);
+                const parameter =
+                    assignment.parameters.find(
+                        item =>
+                            item.id ===
+                            parameterElement.dataset
+                                .parameterId
+                    );
 
+
+                if (!parameter) {
+                    return;
                 }
-            );
-
-        });
 
 
-    /* explanation */
-
-    container
-        .querySelectorAll(
-            "[data-level-explanation]"
-        )
-        .forEach(input => {
-
-            input.addEventListener(
-                "input",
-                () => {
-
-                    const [
-                        p,
-                        l
-                    ] =
-                        input.dataset.levelExplanation
-                            .split(",")
-                            .map(Number);
+                const level =
+                    parameter.levels.find(
+                        item =>
+                            item.id ===
+                            levelElement.dataset
+                                .levelId
+                    );
 
 
-                    assignment.parameters[p]
-                        .levels[l]
-                        .explanation =
-                            input.value;
-
+                if (!level) {
+                    return;
                 }
-            );
-
-        });
 
 
-    /* add level */
+                const scoreInput =
+                    levelElement.querySelector(
+                        "[data-level-score]"
+                    );
+
+
+                const titleInput =
+                    levelElement.querySelector(
+                        "[data-level-title]"
+                    );
+
+
+                const explanationInput =
+                    levelElement.querySelector(
+                        "[data-level-explanation]"
+                    );
+
+
+                scoreInput.addEventListener(
+                    "input",
+                    () => {
+
+                        level.score =
+                            Number(
+                                scoreInput.value
+                            );
+
+                    }
+                );
+
+
+                titleInput.addEventListener(
+                    "input",
+                    () => {
+
+                        level.title =
+                            titleInput.value;
+
+                    }
+                );
+
+
+                explanationInput.addEventListener(
+                    "input",
+                    () => {
+
+                        level.explanation =
+                            explanationInput.value;
+
+                    }
+                );
+
+            }
+        );
+
+
+    /*
+       Niveau toevoegen
+    */
 
     container
         .querySelectorAll(
             "[data-add-level]"
         )
-        .forEach(button => {
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                "click",
-                () => {
+                button.addEventListener(
+                    "click",
+                    () => {
 
-                    const parameter =
-                        assignment.parameters[
-                            Number(
-                                button.dataset.addLevel
-                            )
-                        ];
-
-
-                    parameter.levels.push({
-
-                        id:
-                            createId("level_"),
-
-                        score:
-                            parameter.levels.length + 1,
-
-                        title:
-                            "",
-
-                        explanation:
-                            "Nieuw niveau"
-
-                    });
+                        const parameter =
+                            assignment.parameters.find(
+                                item =>
+                                    item.id ===
+                                    button.dataset
+                                        .addLevel
+                            );
 
 
-                    renderParametersBuilder(
-                        assignment
-                    );
-
-                }
-            );
-
-        });
+                        if (!parameter) {
+                            return;
+                        }
 
 
-    /* delete level */
+                        const existingScores =
+                            parameter.levels
+                                .map(
+                                    level =>
+                                        Number(
+                                            level.score
+                                        )
+                                )
+                                .filter(
+                                    score =>
+                                        !Number.isNaN(
+                                            score
+                                        )
+                                );
+
+
+                        /*
+                           Nieuw niveau krijgt standaard
+                           één punt onder de laagste score.
+                           Als er nog geen scores zijn,
+                           begint het op 1.
+                        */
+
+                        let newScore = 1;
+
+
+                        if (
+                            existingScores.length
+                        ) {
+
+                            newScore =
+                                Math.min(
+                                    ...existingScores
+                                ) - 1;
+
+                        }
+
+
+                        parameter.levels.push({
+
+                            id:
+                                createId(
+                                    "level_"
+                                ),
+
+                            score:
+                                newScore,
+
+                            title:
+                                "",
+
+                            explanation:
+                                ""
+
+                        });
+
+
+                        renderParametersBuilder(
+                            assignment
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+
+    /*
+       Niveau verwijderen
+    */
 
     container
         .querySelectorAll(
             "[data-delete-level]"
         )
-        .forEach(button => {
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                "click",
-                () => {
+                button.addEventListener(
+                    "click",
+                    () => {
 
-                    const [
-                        p,
-                        l
-                    ] =
-                        button.dataset.deleteLevel
-                            .split(",")
-                            .map(Number);
-
-
-                    assignment.parameters[p]
-                        .levels.splice(l, 1);
+                        const parameter =
+                            assignment.parameters.find(
+                                item =>
+                                    item.id ===
+                                    button.dataset
+                                        .deleteLevel
+                            );
 
 
-                    renderParametersBuilder(
-                        assignment
-                    );
-
-                }
-            );
-
-        });
+                        if (!parameter) {
+                            return;
+                        }
 
 
-    /* delete parameter */
+                        if (
+                            parameter.levels.length <= 1
+                        ) {
+
+                            showToast(
+                                "Een criterium moet minstens één niveau hebben."
+                            );
+
+                            return;
+
+                        }
+
+
+                        parameter.levels =
+                            parameter.levels.filter(
+                                level =>
+                                    level.id !==
+                                    button.dataset
+                                        .levelId
+                            );
+
+
+                        renderParametersBuilder(
+                            assignment
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+
+    /*
+       Criterium verwijderen
+    */
 
     container
         .querySelectorAll(
             "[data-delete-parameter]"
         )
-        .forEach(button => {
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                "click",
-                () => {
+                button.addEventListener(
+                    "click",
+                    () => {
 
-                    const index =
-                        Number(
-                            button.dataset.deleteParameter
+                        if (
+                            assignment.parameters.length <= 1
+                        ) {
+
+                            showToast(
+                                "Een opdracht moet minstens één criterium hebben."
+                            );
+
+                            return;
+
+                        }
+
+
+                        if (
+                            !confirm(
+                                "Dit criterium verwijderen?"
+                            )
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        assignment.parameters =
+                            assignment.parameters.filter(
+                                parameter =>
+                                    parameter.id !==
+                                    button.dataset
+                                        .deleteParameter
+                            );
+
+
+                        renderParametersBuilder(
+                            assignment
                         );
 
+                    }
+                );
 
-                    assignment.parameters
-                        .splice(index, 1);
-
-
-                    renderParametersBuilder(
-                        assignment
-                    );
-
-                }
-            );
-
-        });
-
-
-    /* move parameter up */
-
-    container
-        .querySelectorAll(
-            "[data-param-up]"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    const index =
-                        Number(
-                            button.dataset.paramUp
-                        );
-
-
-                    if (index <= 0) return;
-
-
-                    const arr =
-                        assignment.parameters;
-
-
-                    [
-                        arr[index - 1],
-                        arr[index]
-                    ] =
-                    [
-                        arr[index],
-                        arr[index - 1]
-                    ];
-
-
-                    renderParametersBuilder(
-                        assignment
-                    );
-
-                }
-            );
-
-        });
-
-
-    /* move parameter down */
-
-    container
-        .querySelectorAll(
-            "[data-param-down]"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    const index =
-                        Number(
-                            button.dataset.paramDown
-                        );
-
-
-                    const arr =
-                        assignment.parameters;
-
-
-                    if (
-                        index >= arr.length - 1
-                    ) return;
-
-
-                    [
-                        arr[index],
-                        arr[index + 1]
-                    ] =
-                    [
-                        arr[index + 1],
-                        arr[index]
-                    ];
-
-
-                    renderParametersBuilder(
-                        assignment
-                    );
-
-                }
-            );
-
-        });
+            }
+        );
 
 }
 
+
+/* ============================================================
+   CRITERIUM TOEVOEGEN
+============================================================ */
 
 function addParameter() {
 
     const assignment =
         getEditingAssignment();
 
-    if (!assignment) return;
+
+    if (!assignment) {
+        return;
+    }
 
 
     assignment.parameters.push({
 
         id:
-            createId("parameter_"),
+            createId(
+                "parameter_"
+            ),
 
         title:
-            `Parameter ${assignment.parameters.length + 1}`,
+            `Parameter ${
+                assignment.parameters.length + 1
+            }`,
 
-        levels:
-            [
+        levels: [
 
-                {
-                    id:
-                        createId("level_"),
+            {
+                id:
+                    createId(
+                        "level_"
+                    ),
 
-                    score:
-                        4,
+                score:
+                    1,
 
-                    title:
-                        "",
+                title:
+                    "",
 
-                    explanation:
-                        "Nieuw niveau"
+                explanation:
+                    ""
 
-                }
+            },
 
-            ]
+            {
+                id:
+                    createId(
+                        "level_"
+                    ),
+
+                score:
+                    2,
+
+                title:
+                    "",
+
+                explanation:
+                    ""
+
+            },
+
+            {
+                id:
+                    createId(
+                        "level_"
+                    ),
+
+                score:
+                    3,
+
+                title:
+                    "",
+
+                explanation:
+                    ""
+
+            },
+
+            {
+                id:
+                    createId(
+                        "level_"
+                    ),
+
+                score:
+                    4,
+
+                title:
+                    "",
+
+                explanation:
+                    ""
+
+            }
+
+        ]
 
     });
 
@@ -2819,116 +3314,114 @@ function addParameter() {
 }
 
 
-function getEditingAssignment() {
-
-    return state.assignments.find(
-        item =>
-            item.id === editingAssignmentId
-    );
-
-}
-
+/* ============================================================
+   OPDRACHT OPSLAAN
+============================================================ */
 
 async function saveAssignment() {
 
-    const assignment = getEditingAssignment();
+    const assignment =
+        getEditingAssignment();
 
-    if (!assignment) return;
 
-    const title = document
-        .getElementById("assignmentTitle")
-        .value
-        .trim();
+    if (!assignment) {
 
-    if (!title) {
-        showToast("Geef de opdracht een titel.");
+        showToast(
+            "Geen opdracht geselecteerd."
+        );
+
         return;
+
     }
 
-    assignment.title = title;
 
-    assignment.parameters =
-        assignment.parameters.filter(
-            parameter => parameter.title.trim()
+    const title =
+        document
+            .getElementById(
+                "assignmentTitle"
+            )
+            .value
+            .trim();
+
+
+    if (!title) {
+
+        showToast(
+            "Geef de opdracht een naam."
         );
 
-    const data = {
-        title: assignment.title,
-        comments: assignment.comments || [],
-        parameters: assignment.parameters || [],
-        updated_at: new Date().toISOString()
-    };
+        return;
 
-    try {
+    }
 
-        // Bestaat de opdracht al in Firestore?
-        const assignmentRef = doc(
-            db,
-            "assignments",
-            assignment.id
-        );
 
-        const existingDoc =
-            await getDoc(assignmentRef);
+    assignment.title =
+        title;
 
-        if (existingDoc.exists()) {
 
-            await updateDoc(
-                assignmentRef,
-                data
-            );
+    /*
+       Zorg dat scores daadwerkelijk nummers zijn.
+    */
 
-        } else {
+    assignment.parameters.forEach(
+        parameter => {
 
-            await setDoc(
-                assignmentRef,
-                {
-                    ...data,
-                    id: assignment.id,
-                    created_at:
-                        assignment.created_at ||
-                        new Date().toISOString()
+            parameter.levels.forEach(
+                level => {
+
+                    level.score =
+                        Number(
+                            level.score
+                        );
+
                 }
             );
 
         }
+    );
 
-        // Lokale state bijwerken
-        const index =
-            state.assignments.findIndex(
+
+    try {
+
+        const existing =
+            state.assignments.find(
                 item =>
-                    item.id === assignment.id
+                    item.id ===
+                    assignment.id
             );
 
-        if (index >= 0) {
 
-            state.assignments[index] = {
-                ...state.assignments[index],
-                ...data,
-                id: assignment.id
-            };
+        if (existing) {
+
+            await dbUpdate(
+                "assignments",
+                assignment.id,
+                assignment
+            );
 
         } else {
 
-            state.assignments.push({
-                ...assignment,
-                ...data
-            });
+            await dbInsert(
+                "assignments",
+                assignment
+            );
 
         }
 
-        saveLocalState();
 
-        selectedAssignmentId =
-            assignment.id;
+        /*
+           Geen saveLocalState().
+           Firebase is de permanente opslag.
+        */
 
-        renderAll();
 
-        openAssignmentEditor();
+        renderAssignments();
+
 
         showToast(
             "Opdracht opgeslagen."
         );
+
 
     } catch (error) {
 
@@ -2937,56 +3430,88 @@ async function saveAssignment() {
             error
         );
 
+
         showToast(
             "Opdracht kon niet worden opgeslagen: " +
-            (error.message || "onbekende fout")
+            (
+                error.message ||
+                "onbekende fout"
+            )
         );
 
     }
 
 }
 
+
+/* ============================================================
+   OPDRACHT DUPLICEREN
+============================================================ */
+
 async function duplicateAssignment() {
 
     const assignment =
         getEditingAssignment();
 
-    if (!assignment) return;
+
+    if (!assignment) {
+
+        showToast(
+            "Geen opdracht geselecteerd."
+        );
+
+        return;
+
+    }
 
 
-    const copy =
+    const duplicate =
         JSON.parse(
-            JSON.stringify(assignment)
+            JSON.stringify(
+                assignment
+            )
         );
 
 
-    copy.id =
-        createId("assignment_");
+    duplicate.id =
+        createId(
+            "assignment_"
+        );
 
 
-    copy.title +=
-        " – kopie";
+    duplicate.title =
+        `${assignment.title} - kopie`;
 
 
-    copy.parameters =
-        copy.parameters.map(parameter => {
+    duplicate.parameters =
+        duplicate.parameters.map(
+            parameter => {
 
-            parameter.id =
-                createId("parameter_");
+                parameter.id =
+                    createId(
+                        "parameter_"
+                    );
 
-            parameter.levels =
-                parameter.levels.map(level => {
 
-                    level.id =
-                        createId("level_");
+                parameter.levels =
+                    parameter.levels.map(
+                        level => {
 
-                    return level;
+                            level.id =
+                                createId(
+                                    "level_"
+                                );
 
-                });
+                            return level;
 
-            return parameter;
+                        }
+                    );
 
-        });
+
+                return parameter;
+
+            }
+        );
 
 
     try {
@@ -2994,27 +3519,7 @@ async function duplicateAssignment() {
         const result =
             await dbInsert(
                 "assignments",
-                {
-
-                    id:
-                        copy.id,
-
-                    title:
-                        copy.title,
-
-                    comments:
-                        copy.comments,
-
-                    parameters:
-                        copy.parameters,
-
-                    created_at:
-                        new Date().toISOString(),
-
-                    updated_at:
-                        new Date().toISOString()
-
-                }
+                duplicate
             );
 
 
@@ -3027,21 +3532,25 @@ async function duplicateAssignment() {
             result.id;
 
 
-        saveLocalState();
-
         renderAssignments();
         openAssignmentEditor();
 
+
         showToast(
-            "Opdracht gekopieerd."
+            "Opdracht gedupliceerd."
         );
+
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Firebase fout bij dupliceren:",
+            error
+        );
+
 
         showToast(
-            "Kopiëren mislukt."
+            "Opdracht kon niet worden gedupliceerd."
         );
 
     }
@@ -3049,19 +3558,30 @@ async function duplicateAssignment() {
 }
 
 
+/* ============================================================
+   OPDRACHT VERWIJDEREN
+============================================================ */
+
 async function deleteAssignment() {
 
     const assignment =
         getEditingAssignment();
 
-    if (!assignment) return;
+
+    if (!assignment) {
+        return;
+    }
 
 
     if (
         !confirm(
-            `Opdracht "${assignment.title}" verwijderen?`
+            `Weet je zeker dat je "${assignment.title}" wilt verwijderen?`
         )
-    ) return;
+    ) {
+
+        return;
+
+    }
 
 
     try {
@@ -3075,55 +3595,93 @@ async function deleteAssignment() {
         state.assignments =
             state.assignments.filter(
                 item =>
-                    item.id !== assignment.id
-            );
-
-
-        state.evaluations =
-            state.evaluations.filter(
-                item =>
-                    item.assignment_id !==
+                    item.id !==
                     assignment.id
             );
 
 
-        editingAssignmentId = null;
+        /*
+           Ook de editor sluiten.
+        */
+
+        editingAssignmentId =
+            null;
 
 
-        saveLocalState();
+        const editor =
+            document.getElementById(
+                "assignmentEditor"
+            );
+
+
+        const empty =
+            document.getElementById(
+                "assignmentEditorEmpty"
+            );
+
+
+        if (editor) {
+            editor.classList.add(
+                "hidden"
+            );
+        }
+
+
+        if (empty) {
+            empty.classList.remove(
+                "hidden"
+            );
+        }
+
 
         renderAssignments();
-        renderEvaluationSelectors();
-        renderEvaluationStudents();
-        renderEvaluationForm();
-
-
-        document
-            .getElementById("assignmentEditor")
-            .classList.add("hidden");
-
-
-        document
-            .getElementById("assignmentEditorEmpty")
-            .classList.remove("hidden");
 
 
         showToast(
             "Opdracht verwijderd."
         );
 
+
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Firebase fout bij verwijderen opdracht:",
+            error
+        );
+
 
         showToast(
-            "Verwijderen mislukt."
+            "Opdracht kon niet worden verwijderd."
         );
 
     }
 
 }
 
+
+/* ============================================================
+   HUIDIGE OPDRACHT
+============================================================ */
+
+function getEditingAssignment() {
+
+    if (!editingAssignmentId) {
+        return null;
+    }
+
+
+    return state.assignments.find(
+        assignment =>
+            assignment.id ===
+            editingAssignmentId
+    ) || null;
+
+}
+
+
+/* ============================================================
+   OPDRACHTEN OVERZICHT
+============================================================ */
 
 function renderAssignments() {
 
@@ -3133,11 +3691,24 @@ function renderAssignments() {
         );
 
 
+    if (!container) {
+        return;
+    }
+
+
     if (!state.assignments.length) {
 
         container.innerHTML = `
-            <div class="empty-state small">
-                Nog geen opdrachten.
+            <div class="empty-state">
+                <div class="empty-icon">
+                    +
+                </div>
+
+                <h3>Nog geen opdrachten</h3>
+
+                <p>
+                    Maak je eerste evaluatieopdracht aan.
+                </p>
             </div>
         `;
 
@@ -3147,2341 +3718,82 @@ function renderAssignments() {
 
 
     container.innerHTML =
-        state.assignments.map(
-            assignment => {
+        state.assignments
+            .map(
+                assignment => {
 
-                const active =
-                    assignment.id ===
-                    editingAssignmentId;
+                    const active =
+                        assignment.id ===
+                        editingAssignmentId;
 
 
-                return `
-                    <div
-                        class="assignment-item ${
-                            active ? "active" : ""
-                        }"
-                        data-assignment-id="${escapeHtml(assignment.id)}"
-                    >
+                    const parameterCount =
+                        assignment.parameters
+                            ?.length || 0;
 
-                        <div class="assignment-item-main">
 
-                            <div class="assignment-item-title">
-                                ${escapeHtml(assignment.title)}
+                    return `
+                        <button
+                            type="button"
+                            class="assignment-item ${
+                                active
+                                    ? "active"
+                                    : ""
+                            }"
+                            data-assignment-id="${escapeHtml(
+                                assignment.id
+                            )}"
+                        >
+
+                            <div class="assignment-item-main">
+
+                                <strong>
+                                    ${escapeHtml(
+                                        assignment.title
+                                    )}
+                                </strong>
+
+                                <span>
+                                    ${parameterCount}
+                                    ${
+                                        parameterCount === 1
+                                            ? "criterium"
+                                            : "criteria"
+                                    }
+                                </span>
+
                             </div>
 
-                            <div class="assignment-item-meta">
-                                ${assignment.parameters.length}
-                                criteria ·
-                                ${assignment.comments.length}
-                                commentaren
-                            </div>
+                        </button>
+                    `;
 
-                        </div>
-
-                    </div>
-                `;
-
-            }
-        ).join("");
+                }
+            )
+            .join("");
 
 
     container
         .querySelectorAll(
             "[data-assignment-id]"
         )
-        .forEach(item => {
+        .forEach(
+            button => {
 
-            item.addEventListener(
-                "click",
-                () => {
+                button.addEventListener(
+                    "click",
+                    () => {
 
-                    editingAssignmentId =
-                        item.dataset.assignmentId;
-
-                    renderAssignments();
-                    openAssignmentEditor();
-
-                }
-            );
-
-        });
-
-}
-
-
-/* ============================================================
-   LEERLINGEN EVENTS
-============================================================ */
-
-function setupStudentEvents() {
-
-    document
-        .getElementById("newClass")
-        .addEventListener(
-            "click",
-            createClass
-        );
-
-
-    document
-        .getElementById("addStudent")
-        .addEventListener(
-            "click",
-            addStudent
-        );
-
-
-    document
-        .getElementById("editClass")
-        .addEventListener(
-            "click",
-            editClass
-        );
-
-
-    document
-        .getElementById("deleteClass")
-        .addEventListener(
-            "click",
-            deleteClass
-        );
-
-
-    document
-        .getElementById("saveStudentClass")
-        .addEventListener(
-            "click",
-            saveStudentClass
-        );
-
-
-    document
-        .getElementById("closeStudentDetail")
-        .addEventListener(
-            "click",
-            () => {
-
-                document
-                    .getElementById("studentDetail")
-                    .classList.add("hidden");
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(".class-tab")
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    document
-                        .querySelectorAll(".class-tab")
-                        .forEach(item =>
-                            item.classList.remove("active")
-                        );
-
-
-                    document
-                        .querySelectorAll(".class-tab-content")
-                        .forEach(item =>
-                            item.classList.add("hidden")
-                        );
-
-
-                    button.classList.add("active");
-
-
-                    document
-                        .getElementById(
-                            button.dataset.classTab
-                        )
-                        .classList.remove("hidden");
-
-                }
-            );
-
-        });
-
-}
-
-
-/* ============================================================
-   KLASSEN
-============================================================ */
-
-async function createClass() {
-
-    const name =
-        prompt(
-            "Naam van de nieuwe klas:"
-        );
-
-
-    if (!name?.trim()) return;
-
-
-    const cls = {
-
-        id:
-            createId("class_"),
-
-        name:
-            name.trim(),
-
-        created_at:
-            new Date().toISOString(),
-
-        updated_at:
-            new Date().toISOString()
-
-    };
-
-
-    try {
-
-        const result =
-            await dbInsert(
-                "classes",
-                cls
-            );
-
-
-        state.classes.push(
-            result
-        );
-
-
-        selectedClassId =
-            result.id;
-
-
-        saveLocalState();
-
-        renderClasses();
-        renderClassContent();
-
-        renderEvaluationSelectors();
-
-        showToast(
-            "Klas aangemaakt."
-        );
-
-    } catch (error) {
-
-        console.error(error);
-
-        showToast(
-            "Klas kon niet worden aangemaakt."
-        );
-
-    }
-
-}
-
-
-function renderClasses() {
-
-    const container =
-        document.getElementById(
-            "classList"
-        );
-
-
-    if (!state.classes.length) {
-
-        container.innerHTML = `
-            <div class="empty-state small">
-                Nog geen klassen.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    container.innerHTML =
-        state.classes.map(cls => {
-
-            const count =
-                state.students.filter(
-                    student =>
-                        student.class_id === cls.id
-                ).length;
-
-
-            return `
-                <div
-                    class="class-item ${
-                        cls.id === selectedClassId
-                            ? "active"
-                            : ""
-                    }"
-                    data-class-id="${escapeHtml(cls.id)}"
-                >
-
-                    <div class="class-item-name">
-                        ${escapeHtml(cls.name)}
-                    </div>
-
-                    <div class="class-item-count">
-                        ${count}
-                    </div>
-
-                </div>
-            `;
-
-        }).join("");
-
-
-    container
-        .querySelectorAll(
-            "[data-class-id]"
-        )
-        .forEach(item => {
-
-            item.addEventListener(
-                "click",
-                () => {
-
-                    selectedClassId =
-                        item.dataset.classId;
-
-                    renderClasses();
-                    renderClassContent();
-
-                    renderEvaluationSelectors();
-                    renderEvaluationStudents();
-
-                }
-            );
-
-        });
-
-}
-
-
-function renderClassContent() {
-
-    const empty =
-        document.getElementById(
-            "classEmpty"
-        );
-
-    const content =
-        document.getElementById(
-            "classContent"
-        );
-
-
-    const cls =
-        state.classes.find(
-            item =>
-                item.id === selectedClassId
-        );
-
-
-    if (!cls) {
-
-        empty.classList.remove("hidden");
-        content.classList.add("hidden");
-
-        return;
-
-    }
-
-
-    empty.classList.add("hidden");
-    content.classList.remove("hidden");
-
-
-    document.getElementById(
-        "classTitle"
-    ).textContent =
-        cls.name;
-
-
-    const students =
-        state.students.filter(
-            student =>
-                student.class_id === cls.id
-        );
-
-
-    document.getElementById(
-        "classStudentCount"
-    ).textContent =
-        students.length;
-
-
-    document.getElementById(
-        "classEvaluationCount"
-    ).textContent =
-        state.evaluations.filter(
-            evaluation =>
-                evaluation.class_id === cls.id
-        ).length;
-
-
-    renderStudentsTable(
-        students
-    );
-
-    renderClassScores(
-        cls,
-        students
-    );
-
-}
-
-
-function renderStudentsTable(
-    students
-) {
-
-    const container =
-        document.getElementById(
-            "studentsTable"
-        );
-
-
-    if (!students.length) {
-
-        container.innerHTML = `
-            <div class="empty-state small">
-                Voeg je eerste leerling toe.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    container.innerHTML = `
-
-        <table class="students-table">
-
-            <thead>
-
-                <tr>
-                    <th>LEERLING</th>
-                    <th>EVALUATIES</th>
-                    <th></th>
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                ${
-                    students.map(student => {
-
-                        const evaluations =
-                            state.evaluations.filter(
-                                evaluation =>
-                                    evaluation.student_id ===
-                                    student.id
-                            ).length;
-
-
-                        return `
-
-                            <tr>
-
-                                <td>
-                                    <strong>
-                                        ${escapeHtml(student.name)}
-                                    </strong>
-                                </td>
-
-                                <td>
-                                    ${evaluations}
-                                </td>
-
-                                <td>
-
-                                    <div class="table-actions">
-
-                                        <button
-                                            class="table-action"
-                                            data-student-detail="${escapeHtml(student.id)}"
-                                        >
-                                            Bekijken
-                                        </button>
-
-                                        <button
-                                            class="table-action"
-                                            data-delete-student="${escapeHtml(student.id)}"
-                                        >
-                                            Verwijderen
-                                        </button>
-
-                                    </div>
-
-                                </td>
-
-                            </tr>
-
-                        `;
-
-                    }).join("")
-                }
-
-            </tbody>
-
-        </table>
-
-    `;
-
-
-    container
-        .querySelectorAll(
-            "[data-student-detail]"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    openStudentDetail(
-                        button.dataset.studentDetail
-                    );
-
-                }
-            );
-
-        });
-
-
-    container
-        .querySelectorAll(
-            "[data-delete-student]"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                async () => {
-
-                    const student =
-                        state.students.find(
-                            item =>
-                                item.id ===
-                                button.dataset.deleteStudent
-                        );
-
-
-                    if (!student) return;
-
-
-                    if (
-                        !confirm(
-                            `${student.name} verwijderen?`
-                        )
-                    ) return;
-
-
-                    try {
-
-                        await dbDelete(
-                            "students",
-                            student.id
-                        );
-
-
-                        state.students =
-                            state.students.filter(
-                                item =>
-                                    item.id !==
-                                    student.id
-                            );
-
-
-                        state.evaluations =
-                            state.evaluations.filter(
-                                item =>
-                                    item.student_id !==
-                                    student.id
-                            );
-
-
-                        saveLocalState();
-
-                        renderAll();
-
-                        showToast(
-                            "Leerling verwijderd."
-                        );
-
-                    } catch (error) {
-
-                        console.error(error);
-
-                        showToast(
-                            "Verwijderen mislukt."
-                        );
-
-                    }
-
-                }
-            );
-
-        });
-
-}
-
-
-async function addStudent() {
-
-    if (!selectedClassId) {
-
-        showToast(
-            "Selecteer eerst een klas."
-        );
-
-        return;
-
-    }
-
-
-    const input =
-        document.getElementById(
-            "newStudentName"
-        );
-
-
-    const name =
-        input.value.trim();
-
-
-    if (!name) {
-
-        showToast(
-            "Vul een naam in."
-        );
-
-        return;
-
-    }
-
-
-    const student = {
-
-        id:
-            createId("student_"),
-
-        name,
-
-        class_id:
-            selectedClassId,
-
-        created_at:
-            new Date().toISOString(),
-
-        updated_at:
-            new Date().toISOString()
-
-    };
-
-
-    try {
-
-        const result =
-            await dbInsert(
-                "students",
-                student
-            );
-
-
-        state.students.push(
-            result
-        );
-
-
-        input.value = "";
-
-        saveLocalState();
-
-        renderClasses();
-        renderClassContent();
-
-        renderEvaluationStudents();
-
-        showToast(
-            "Leerling toegevoegd."
-        );
-
-    } catch (error) {
-
-        console.error(error);
-
-        showToast(
-            "Leerling kon niet worden toegevoegd."
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   KLAS BEWERKEN
-============================================================ */
-
-async function editClass() {
-
-    const cls =
-        state.classes.find(
-            item =>
-                item.id === selectedClassId
-        );
-
-
-    if (!cls) return;
-
-
-    const name =
-        prompt(
-            "Nieuwe naam:",
-            cls.name
-        );
-
-
-    if (!name?.trim()) return;
-
-
-    try {
-
-        const updated =
-            await dbUpdate(
-                "classes",
-                cls.id,
-                {
-
-                    name:
-                        name.trim(),
-
-                    updated_at:
-                        new Date().toISOString()
-
-                }
-            );
-
-
-        Object.assign(
-            cls,
-            updated
-        );
-
-
-        saveLocalState();
-
-        renderClasses();
-        renderClassContent();
-        renderEvaluationSelectors();
-
-        showToast(
-            "Klas aangepast."
-        );
-
-    } catch (error) {
-
-        console.error(error);
-
-        showToast(
-            "Klas kon niet worden aangepast."
-        );
-
-    }
-
-}
-
-
-async function deleteClass() {
-
-    const cls =
-        state.classes.find(
-            item =>
-                item.id === selectedClassId
-        );
-
-
-    if (!cls) return;
-
-
-    const students =
-        state.students.filter(
-            student =>
-                student.class_id === cls.id
-        );
-
-
-    if (
-        !confirm(
-            `Klas ${cls.name} verwijderen?\n\nOok de leerlingen en hun evaluaties worden verwijderd.`
-        )
-    ) return;
-
-
-    try {
-
-        await dbDelete(
-            "classes",
-            cls.id
-        );
-
-
-        state.classes =
-            state.classes.filter(
-                item =>
-                    item.id !== cls.id
-            );
-
-
-        state.students =
-            state.students.filter(
-                student =>
-                    student.class_id !== cls.id
-            );
-
-
-        state.evaluations =
-            state.evaluations.filter(
-                evaluation =>
-                    evaluation.class_id !== cls.id
-            );
-
-
-        selectedClassId = null;
-
-        saveLocalState();
-
-        renderAll();
-
-        showToast(
-            "Klas verwijderd."
-        );
-
-    } catch (error) {
-
-        console.error(error);
-
-        showToast(
-            "Klas kon niet worden verwijderd."
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   LEERLING DETAIL
-============================================================ */
-
-let selectedDetailStudentId = null;
-
-
-function openStudentDetail(
-    studentId
-) {
-
-    selectedDetailStudentId =
-        studentId;
-
-
-    const student =
-        state.students.find(
-            item =>
-                item.id === studentId
-        );
-
-
-    if (!student) return;
-
-
-    const panel =
-        document.getElementById(
-            "studentDetail"
-        );
-
-
-    panel.classList.remove(
-        "hidden"
-    );
-
-
-    document.getElementById(
-        "studentDetailName"
-    ).textContent =
-        student.name;
-
-
-    const select =
-        document.getElementById(
-            "studentClassChange"
-        );
-
-
-    select.innerHTML =
-        state.classes.map(cls => `
-
-            <option
-                value="${escapeHtml(cls.id)}"
-                ${
-                    cls.id === student.class_id
-                        ? "selected"
-                        : ""
-                }
-            >
-                ${escapeHtml(cls.name)}
-            </option>
-
-        `).join("");
-
-
-    renderStudentEvaluationHistory();
-
-    panel.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-    });
-
-}
-
-
-function renderStudentEvaluationHistory() {
-
-    const container =
-        document.getElementById(
-            "studentEvaluationHistory"
-        );
-
-
-    const evaluations =
-        state.evaluations
-            .filter(
-                evaluation =>
-                    evaluation.student_id ===
-                    selectedDetailStudentId
-            )
-            .sort(
-                (a, b) =>
-                    new Date(
-                        b.created_at ||
-                        b.evaluation_date
-                    ) -
-                    new Date(
-                        a.created_at ||
-                        a.evaluation_date
-                    )
-            );
-
-
-    if (!evaluations.length) {
-
-        container.innerHTML = `
-            <div class="empty-state small">
-                Deze leerling heeft nog geen evaluaties.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    container.innerHTML =
-        evaluations.map(evaluation => {
-
-            const assignment =
-                state.assignments.find(
-                    item =>
-                        item.id ===
-                        evaluation.assignment_id
-                );
-
-
-            const score =
-                calculateEvaluationScore(
-                    evaluation,
-                    assignment
-                );
-
-
-            return `
-
-                <div class="history-item">
-
-                    <div class="history-date">
-
-                        <strong>
-                            ${
-                                escapeHtml(
-                                    assignment?.title ||
-                                    "Onbekende opdracht"
-                                )
-                            }
-                        </strong>
-
-                        <div class="history-attempt">
-
-                            ${formatDate(
-                                evaluation.evaluation_date ||
-                                evaluation.created_at
-                            )}
-
-                            ·
-
-                            ${
-                                evaluation.attempt_number > 1
-                                    ? "Herkansing"
-                                    : "Eerste poging"
-                            }
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="history-score">
-
-                       ${
-    score === null
-        ? "—"
-        : `${score.total} / ${score.max}`
-}
-
-                    </div>
-
-
-                    <div class="history-actions">
-
-                        <button
-                            data-student-evaluation-edit="${escapeHtml(evaluation.id)}"
-                        >
-                            Bewerken
-                        </button>
-
-                        <button
-                            data-student-evaluation-delete="${escapeHtml(evaluation.id)}"
-                        >
-                            Verwijderen
-                        </button>
-
-                    </div>
-
-                </div>
-
-            `;
-
-        }).join("");
-
-
-    container
-        .querySelectorAll(
-            "[data-student-evaluation-edit]"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    const evaluation =
-                        state.evaluations.find(
-                            item =>
-                                item.id ===
-                                button.dataset
-                                    .studentEvaluationEdit
-                        );
-
-
-                    if (!evaluation) return;
-
-
-                    selectedAssignmentId =
-                        evaluation.assignment_id;
-
-                    selectedClassId =
-                        evaluation.class_id;
-
-                    selectedStudentId =
-                        evaluation.student_id;
-
-                    currentEvaluationId =
-                        evaluation.id;
-
-                    isRetake = false;
-
-
-                    document
-                        .querySelector(
-                            '[data-page="evaluationPage"]'
-                        )
-                        .click();
-
-
-                    renderEvaluationSelectors();
-                    renderEvaluationStudents();
-                    renderEvaluationForm();
-
-                }
-            );
-
-        });
-
-
-    container
-        .querySelectorAll(
-            "[data-student-evaluation-delete]"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                async () => {
-
-                    if (
-                        !confirm(
-                            "Deze evaluatie verwijderen?"
-                        )
-                    ) return;
-
-
-                    try {
-
-                        await dbDelete(
-                            "evaluations",
+                        editingAssignmentId =
                             button.dataset
-                                .studentEvaluationDelete
-                        );
+                                .assignmentId;
 
-
-                        state.evaluations =
-                            state.evaluations.filter(
-                                item =>
-                                    item.id !==
-                                    button.dataset
-                                        .studentEvaluationDelete
-                            );
-
-
-                        saveLocalState();
-
-                        renderStudentEvaluationHistory();
-                        renderClassContent();
-
-                        showToast(
-                            "Evaluatie verwijderd."
-                        );
-
-                    } catch (error) {
-
-                        console.error(error);
-
-                        showToast(
-                            "Verwijderen mislukt."
-                        );
+                        renderAssignments();
+                        openAssignmentEditor();
 
                     }
-
-                }
-            );
-
-        });
-
-}
-
-
-async function saveStudentClass() {
-
-    const student =
-        state.students.find(
-            item =>
-                item.id === selectedDetailStudentId
-        );
-
-
-    if (!student) return;
-
-
-    const newClassId =
-        document.getElementById(
-            "studentClassChange"
-        ).value;
-
-
-    if (!newClassId) return;
-
-
-    try {
-
-        const updated =
-            await dbUpdate(
-                "students",
-                student.id,
-                {
-
-                    class_id:
-                        newClassId,
-
-                    updated_at:
-                        new Date().toISOString()
-
-                }
-            );
-
-
-        Object.assign(
-            student,
-            updated
-        );
-
-
-        /*
-           De klas op historische evaluaties blijft behouden.
-           Daardoor blijft de geschiedenis correct.
-        */
-
-
-        saveLocalState();
-
-        renderAll();
-
-        openStudentDetail(
-            student.id
-        );
-
-        showToast(
-            "Klas van leerling gewijzigd."
-        );
-
-    } catch (error) {
-
-        console.error(error);
-
-        showToast(
-            "Klas wijzigen mislukt."
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   KLAS SCOREOVERZICHT
-============================================================ */
-
-function renderClassScores(
-    cls,
-    students
-) {
-
-    const container =
-        document.getElementById(
-            "classScores"
-        );
-
-
-    if (!students.length) {
-
-        container.innerHTML = `
-            <div class="empty-state small">
-                Nog geen leerlingen.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    if (!state.assignments.length) {
-
-        container.innerHTML = `
-            <div class="empty-state small">
-                Maak eerst een opdracht aan.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    let html = `
-        <div class="score-table-wrapper">
-
-            <table class="score-table">
-
-                <thead>
-
-                    <tr>
-                        <th>LEERLING</th>
-
-                        ${
-                            state.assignments.map(
-                                assignment => `
-                                    <th>
-                                        ${escapeHtml(
-                                            assignment.title
-                                        )}
-                                    </th>
-                                `
-                            ).join("")
-                        }
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-    `;
-
-
-    students.forEach(student => {
-
-        html += `
-            <tr>
-
-                <td>
-                    <strong>
-                        ${escapeHtml(student.name)}
-                    </strong>
-                </td>
-        `;
-
-
-        state.assignments.forEach(
-            assignment => {
-
-                const evaluation =
-                    getLatestEvaluation(
-                        student.id,
-                        assignment.id
-                    );
-
-
-                const score =
-                    calculateEvaluationScore(
-                        evaluation,
-                        assignment
-                    );
-
-
-                html += `
-
-                    <td>
-
-                       ${
-    score === null
-        ? `<span class="no-score">—</span>`
-        : `<span class="score-value">
-            ${score.total} / ${score.max}
-           </span>`
-}
-
-                    </td>
-
-                `;
-
-            }
-        );
-
-
-        html += `
-            </tr>
-        `;
-
-    });
-
-
-    html += `
-                </tbody>
-
-            </table>
-
-        </div>
-    `;
-
-
-    container.innerHTML =
-        html;
-
-}
-
-
-/* ============================================================
-   PDF
-============================================================ */
-
-function setupPdfDocument(
-    title,
-    student,
-    cls,
-    assignment
-) {
-
-    const {
-        jsPDF
-    } =
-        window.jspdf;
-
-
-    const doc =
-        new jsPDF({
-            unit: "mm",
-            format: "a4"
-        });
-
-
-    const pageWidth =
-        doc.internal.pageSize.getWidth();
-
-
-    const margin = 18;
-
-
-    doc.setFont(
-        "helvetica",
-        "bold"
-    );
-
-    doc.setTextColor(
-        42,
-        55,
-        177
-    );
-
-    doc.setFontSize(24);
-
-    doc.text(
-        title,
-        margin,
-        25
-    );
-
-
-    doc.setFontSize(13);
-
-    doc.text(
-        `${student.name}  ·  ${cls?.name || ""}`,
-        margin,
-        34
-    );
-
-
-    doc.setFont(
-        "helvetica",
-        "normal"
-    );
-
-    doc.setFontSize(9);
-
-    doc.setTextColor(
-        60,
-        60,
-        68
-    );
-
-
-    const date =
-        formatDate(
-            new Date().toISOString()
-        );
-
-
-    doc.text(
-        `Datum opdracht: ${date}`,
-        margin,
-        43
-    );
-
-
-    doc.text(
-        "Leerkracht: Dhr. J. Vermote",
-        margin,
-        49
-    );
-
-
-    doc.text(
-        "School: Atheneum Brugge",
-        margin,
-        55
-    );
-
-
-    doc.setDrawColor(
-        42,
-        55,
-        177
-    );
-
-    doc.setLineWidth(
-        0.6
-    );
-
-    doc.line(
-        margin,
-        61,
-        pageWidth - margin,
-        61
-    );
-
-
-    return doc;
-
-}
-
-
-function exportEvaluationPdf(
-    evaluation,
-    student,
-    assignment,
-    cls,
-    doc = null
-) {
-
-    const {
-        jsPDF
-    } =
-        window.jspdf;
-
-
-    if (!doc) {
-
-        doc =
-            setupPdfDocument(
-                assignment.title,
-                student,
-                cls,
-                assignment
-            );
-
-    }
-
-
-    const margin = 18;
-
-    const pageWidth =
-        doc.internal.pageSize.getWidth();
-
-
-    const scores =
-        assignment.parameters.map(
-            parameter => {
-
-                const selected =
-                    evaluation?.scores?.[
-                        parameter.id
-                    ];
-
-
-                return [
-
-                    parameter.title,
-
-                    selected
-                        ? String(selected.score)
-                        : "—",
-
-                    selected
-                        ? selected.explanation
-                        : "Niet beoordeeld"
-
-                ];
-
-            }
-        );
-
-
-    let y = 70;
-
-
-    /*
-       Eigen vormgeving:
-       geen standaard saaie tabel.
-       De tabel krijgt een gekleurde balk, afgeronde
-       inhoudsblokken en duidelijke typografie.
-    */
-
-    assignment.parameters.forEach(
-        (parameter, index) => {
-
-            const selected =
-                evaluation?.scores?.[
-                    parameter.id
-                ];
-
-
-            const blockHeight =
-                22;
-
-
-            doc.setFillColor(
-                245,
-                243,
-                245
-            );
-
-
-            doc.roundedRect(
-                margin,
-                y,
-                pageWidth - margin * 2,
-                blockHeight,
-                3,
-                3,
-                "F"
-            );
-
-
-            doc.setFillColor(
-                42,
-                55,
-                177
-            );
-
-
-            doc.roundedRect(
-                margin,
-                y,
-                5,
-                blockHeight,
-                2,
-                2,
-                "F"
-            );
-
-
-            doc.setFont(
-                "helvetica",
-                "bold"
-            );
-
-            doc.setFontSize(
-                9
-            );
-
-            doc.setTextColor(
-                30,
-                30,
-                38
-            );
-
-
-            doc.text(
-                parameter.title,
-                margin + 10,
-                y + 8
-            );
-
-
-            doc.setTextColor(
-                42,
-                55,
-                177
-            );
-
-            doc.setFontSize(
-                13
-            );
-
-            doc.text(
-                selected
-                    ? String(selected.score)
-                    : "—",
-                margin + 10,
-                y + 17
-            );
-
-
-            doc.setFont(
-                "helvetica",
-                "normal"
-            );
-
-            doc.setTextColor(
-                90,
-                90,
-                100
-            );
-
-            doc.setFontSize(
-                8
-            );
-
-
-            const explanation =
-                selected
-                    ? selected.explanation
-                    : "Niet beoordeeld";
-
-
-            const explanationLines =
-                doc.splitTextToSize(
-                    explanation,
-                    pageWidth - margin * 2 - 65
                 );
 
-
-            doc.text(
-                explanationLines,
-                margin + 35,
-                y + 9
-            );
-
-
-            y += blockHeight + 5;
-
-
-            if (y > 250) {
-
-                doc.addPage();
-
-                y = 25;
-
             }
-
-        }
-    );
-
-
-    /* feedback */
-
-    if (y > 240) {
-
-        doc.addPage();
-
-        y = 25;
-
-    }
-
-
-    doc.setFont(
-        "helvetica",
-        "bold"
-    );
-
-    doc.setFontSize(
-        11
-    );
-
-    doc.setTextColor(
-        42,
-        55,
-        177
-    );
-
-    doc.text(
-        "FEEDBACK",
-        margin,
-        y + 8
-    );
-
-
-    y += 14;
-
-
-    doc.setFont(
-        "helvetica",
-        "normal"
-    );
-
-    doc.setTextColor(
-        45,
-        45,
-        52
-    );
-
-    doc.setFontSize(
-        9
-    );
-
-
-    const feedback =
-        evaluation?.feedback ||
-        "Geen feedback ingevoerd.";
-
-
-    const feedbackLines =
-        doc.splitTextToSize(
-            feedback,
-            pageWidth - margin * 2
-        );
-
-
-    doc.text(
-        feedbackLines,
-        margin,
-        y
-    );
-
-
-    y +=
-        Math.max(
-            20,
-            feedbackLines.length * 5 + 12
-        );
-
-
-    /* eindscore */
-
-    doc.setFillColor(
-        42,
-        55,
-        177
-    );
-
-
-    doc.roundedRect(
-        margin,
-        y,
-        pageWidth - margin * 2,
-        30,
-        4,
-        4,
-        "F"
-    );
-
-
-    doc.setTextColor(
-        255,
-        255,
-        255
-    );
-
-
-    doc.setFont(
-        "helvetica",
-        "bold"
-    );
-
-    doc.setFontSize(
-        9
-    );
-
-
-    doc.text(
-        "EINDSCORE",
-        margin + 10,
-        y + 11
-    );
-
-
-    const score =
-        calculateEvaluationScore(
-            evaluation,
-            assignment
-        );
-
-
-    doc.setFontSize(
-        19
-    );
-
-
-   doc.text(
-    score === null
-        ? "—"
-        : `${score.total} / ${score.max}`,
-    margin + 10,
-    y + 23
-);
-
-
-    return doc;
-
-}
-
-
-async function exportSelectedStudent() {
-
-    if (
-        !selectedStudentId ||
-        !selectedAssignmentId
-    ) {
-
-        showToast(
-            "Selecteer eerst een opdracht en leerling."
-        );
-
-        return;
-
-    }
-
-
-    const student =
-        state.students.find(
-            item =>
-                item.id === selectedStudentId
-        );
-
-
-    const assignment =
-        state.assignments.find(
-            item =>
-                item.id === selectedAssignmentId
-        );
-
-
-    const cls =
-        state.classes.find(
-            item =>
-                item.id === student.class_id
-        );
-
-
-    const evaluation =
-        currentEvaluationId
-            ? state.evaluations.find(
-                item =>
-                    item.id === currentEvaluationId
-            )
-            : getLatestEvaluation(
-                selectedStudentId,
-                selectedAssignmentId
-            );
-
-
-    if (!evaluation) {
-
-        showToast(
-            "Er is nog geen evaluatie om te exporteren."
-        );
-
-        return;
-
-    }
-
-
-    const doc =
-        exportEvaluationPdf(
-            evaluation,
-            student,
-            assignment,
-            cls
-        );
-
-
-    const filename =
-        `${safeFilename(student.name)}-${safeFilename(assignment.title)}.pdf`;
-
-
-    doc.save(
-        filename
-    );
-
-
-    showToast(
-        "PDF aangemaakt."
-    );
-
-}
-
-
-async function exportSelectedClass() {
-
-    if (!selectedClassId) {
-
-        showToast(
-            "Selecteer eerst een klas."
-        );
-
-        return;
-
-    }
-
-
-    const cls =
-        state.classes.find(
-            item =>
-                item.id === selectedClassId
-        );
-
-
-    const students =
-        state.students.filter(
-            student =>
-                student.class_id === cls.id
-        );
-
-
-    if (!students.length) {
-
-        showToast(
-            "Deze klas bevat nog geen leerlingen."
-        );
-
-        return;
-
-    }
-
-
-    const {
-        jsPDF
-    } =
-        window.jspdf;
-
-
-    let doc = null;
-
-    let exported = 0;
-
-
-    state.assignments.forEach(
-        assignment => {
-
-            students.forEach(
-                student => {
-
-                    const evaluation =
-                        getLatestEvaluation(
-                            student.id,
-                            assignment.id
-                        );
-
-
-                    if (!evaluation) return;
-
-
-                    if (!doc) {
-
-                        doc =
-                            setupPdfDocument(
-                                assignment.title,
-                                student,
-                                cls,
-                                assignment
-                            );
-
-                    } else {
-
-                        doc.addPage();
-
-                        doc =
-                            addPdfHeader(
-                                doc,
-                                assignment,
-                                student,
-                                cls
-                            );
-
-                    }
-
-
-                    exportEvaluationPdf(
-                        evaluation,
-                        student,
-                        assignment,
-                        cls,
-                        doc
-                    );
-
-
-                    exported++;
-
-                }
-            );
-
-        }
-    );
-
-
-    if (!doc) {
-
-        showToast(
-            "Er zijn nog geen evaluaties voor deze klas."
-        );
-
-        return;
-
-    }
-
-
-    doc.save(
-        `${safeFilename(cls.name)}-evaluaties.pdf`
-    );
-
-
-    showToast(
-        `${exported} evaluatie(s) geëxporteerd.`
-    );
-
-}
-
-
-function addPdfHeader(
-    doc,
-    assignment,
-    student,
-    cls
-) {
-
-    const pageWidth =
-        doc.internal.pageSize.getWidth();
-
-    const margin = 18;
-
-
-    doc.setFont(
-        "helvetica",
-        "bold"
-    );
-
-    doc.setTextColor(
-        42,
-        55,
-        177
-    );
-
-    doc.setFontSize(
-        24
-    );
-
-    doc.text(
-        assignment.title,
-        margin,
-        25
-    );
-
-
-    doc.setFontSize(
-        13
-    );
-
-    doc.text(
-        `${student.name}  ·  ${cls?.name || ""}`,
-        margin,
-        34
-    );
-
-
-    doc.setFont(
-        "helvetica",
-        "normal"
-    );
-
-    doc.setFontSize(
-        9
-    );
-
-    doc.setTextColor(
-        60,
-        60,
-        68
-    );
-
-
-    doc.text(
-        `Datum opdracht: ${formatDate(
-            new Date().toISOString()
-        )}`,
-        margin,
-        43
-    );
-
-
-    doc.text(
-        "Leerkracht: Dhr. J. Vermote",
-        margin,
-        49
-    );
-
-
-    doc.text(
-        "School: Atheneum Brugge",
-        margin,
-        55
-    );
-
-
-    doc.setDrawColor(
-        42,
-        55,
-        177
-    );
-
-    doc.setLineWidth(
-        0.6
-    );
-
-    doc.line(
-        margin,
-        61,
-        pageWidth - margin,
-        61
-    );
-
-
-    return doc;
-
-}
-
-
-/* ============================================================
-   ALGEMENE RENDER
-============================================================ */
-
-function renderAll() {
-
-    renderEvaluationSelectors();
-    renderEvaluationStudents();
-    renderEvaluationForm();
-
-    renderAssignments();
-
-    renderClasses();
-    renderClassContent();
-
-    renderStudentEvaluationHistory();
-
-}
-
-
-/* ============================================================
-   UTILITIES
-============================================================ */
-
-function formatScore(
-    score
-) {
-
-    return Number(
-        score
-    ).toLocaleString(
-        "nl-BE",
-        {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }
-    );
-
-}
-
-
-function formatDate(
-    value
-) {
-
-    if (!value) return "—";
-
-
-    const date =
-        new Date(value);
-
-
-    return date.toLocaleDateString(
-        "nl-BE",
-        {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric"
-        }
-    );
-
-}
-
-
-function safeFilename(
-    text
-) {
-
-    return String(text || "export")
-        .replace(
-            /[<>:"/\\|?*]+/g,
-            "-"
-        )
-        .replace(
-            /\s+/g,
-            "-"
         );
 
 }
-
-
-function escapeHtml(
-    value
-) {
-
-    return String(
-        value ?? ""
-    )
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-function showToast(
-    message
-) {
-
-    const toast =
-        document.getElementById(
-            "toast"
-        );
-
-
-    document.getElementById(
-        "toastMessage"
-    ).textContent =
-        message;
-
-
-    toast.classList.add(
-        "show"
-    );
-
-
-    clearTimeout(
-        showToast.timeout
-    );
-
-
-    showToast.timeout =
-        setTimeout(
-            () => {
-
-                toast.classList.remove(
-                    "show"
-                );
-
-            },
-            2500
-        );
-
-}
-
-
-/* ============================================================
-   START
-============================================================ */
-
-updateTimerDisplay();

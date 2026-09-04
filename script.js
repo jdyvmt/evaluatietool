@@ -405,170 +405,240 @@ function setupNavigation(){
 
 /* ============================================================
    EVALUATIE EVENTS
-   ============================================================ */
+============================================================ */
 
-function setupEvaluationEvents(){
+function setupEvaluationEvents() {
 
-    document
-        .getElementById(
+    const evaluationAssignment =
+        document.getElementById(
             "evaluationAssignment"
-        )
-        .addEventListener(
+        );
+
+    if (evaluationAssignment) {
+
+        evaluationAssignment.addEventListener(
             "change",
-            event=>{
+            event => {
 
-                selectedAssignmentId=
-                    event.target.value||
-                    null;
+                selectedAssignmentId =
+                    event.target.value || null;
 
-                currentEvaluationId=null;
-                isRetake=false;
+                currentEvaluationId = null;
+                isRetake = false;
 
                 renderEvaluationStudents();
                 renderEvaluationForm();
+
             }
         );
 
+    }
 
-    document
-        .getElementById(
+
+    const evaluationClass =
+        document.getElementById(
             "evaluationClass"
-        )
-        .addEventListener(
+        );
+
+    if (evaluationClass) {
+
+        evaluationClass.addEventListener(
             "change",
-            event=>{
+            event => {
 
-                selectedClassId=
-                    event.target.value||
-                    null;
+                selectedClassId =
+                    event.target.value || null;
 
-                selectedStudentId=null;
+                selectedStudentId = null;
 
                 renderEvaluationStudents();
                 renderEvaluationForm();
+
             }
         );
 
+    }
 
-    document
-        .getElementById(
+
+    const studentSearch =
+        document.getElementById(
             "studentSearch"
-        )
-        .addEventListener(
+        );
+
+    if (studentSearch) {
+
+        studentSearch.addEventListener(
             "input",
-            ()=>{
+            () => {
+
                 renderEvaluationStudents();
+
             }
         );
 
-
-    document
-        .getElementById(
-            "filterUnevaluated"
-        )
-        .addEventListener(
-            "click",
-            event=>{
-
-                filterUnevaluated=
-                    !filterUnevaluated;
-
-                event.currentTarget.classList.toggle(
-                    "active",
-                    filterUnevaluated
-                );
-
-                renderEvaluationStudents();
-            }
-        );
+    }
 
 
-    document
-        .getElementById(
+  const filterUnevaluatedButton =
+    document.getElementById(
+        "filterUnevaluated"
+    );
+
+if (filterUnevaluatedButton) {
+
+    filterUnevaluatedButton.addEventListener(
+        "click",
+        event => {
+
+            filterUnevaluated =
+                !filterUnevaluated;
+
+            event.currentTarget.classList.toggle(
+                "active",
+                filterUnevaluated
+            );
+
+            renderEvaluationStudents();
+
+        }
+    );
+
+}
+
+
+    const retakeButton =
+        document.getElementById(
             "retakeButton"
-        )
-        .addEventListener(
+        );
+
+    if (retakeButton) {
+
+        retakeButton.addEventListener(
             "click",
             startRetake
         );
 
+    }
 
-    document
-        .getElementById(
+
+    const saveEvaluationButton =
+        document.getElementById(
             "saveEvaluation"
-        )
-        .addEventListener(
+        );
+
+    if (saveEvaluationButton) {
+
+        saveEvaluationButton.addEventListener(
             "click",
             saveEvaluation
         );
 
+    }
 
-    document
-        .getElementById(
+
+    const exportStudentButton =
+        document.getElementById(
             "exportStudent"
-        )
-        .addEventListener(
+        );
+
+    if (exportStudentButton) {
+
+        exportStudentButton.addEventListener(
             "click",
             exportSelectedStudent
         );
 
+    }
 
-    document
-        .getElementById(
+
+    const exportClassButton =
+        document.getElementById(
             "exportClass"
-        )
-        .addEventListener(
+        );
+
+    if (exportClassButton) {
+
+        exportClassButton.addEventListener(
             "click",
             exportSelectedClass
         );
 
+    }
 
-    document
-        .getElementById(
+
+    const toggleHistoryButton =
+        document.getElementById(
             "toggleHistory"
-        )
-        .addEventListener(
+        );
+
+    if (toggleHistoryButton) {
+
+        toggleHistoryButton.addEventListener(
             "click",
-            ()=>{
-                document
-                    .getElementById(
+            () => {
+
+                const history =
+                    document.getElementById(
                         "evaluationHistory"
-                    )
-                    .classList.toggle(
+                    );
+
+                if (history) {
+
+                    history.classList.toggle(
                         "hidden"
                     );
+
+                }
+
             }
         );
 
+    }
 
-    document
-        .getElementById(
+
+    const timerStart =
+        document.getElementById(
             "timerStart"
-        )
-        .addEventListener(
+        );
+
+    if (timerStart) {
+
+        timerStart.addEventListener(
             "click",
             startTimer
         );
 
+    }
 
-    document
-        .getElementById(
+
+    const timerPause =
+        document.getElementById(
             "timerPause"
-        )
-        .addEventListener(
+        );
+
+    if (timerPause) {
+
+        timerPause.addEventListener(
             "click",
             pauseTimer
         );
 
+    }
 
-    document
-        .getElementById(
+
+    const timerReset =
+        document.getElementById(
             "timerReset"
-        )
-        .addEventListener(
+        );
+
+    if (timerReset) {
+
+        timerReset.addEventListener(
             "click",
             resetTimer
         );
+
+    }
 
 }
 

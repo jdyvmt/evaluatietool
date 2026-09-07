@@ -989,7 +989,7 @@ textarea {
     color: var(--muted);
 
     font-weight: 800;
-    
+
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1041,40 +1041,37 @@ textarea {
     padding: 12px;
 }
 
-/* NIVEAU RIJ: Score (45px) | Omschrijving (rest) | Kruisje (38px) */
+/* NIVEAU RIJ: Score (60px) | Omschrijving (rest) | Kruisje (38px) */
 .level-builder {
-    display: grid;
-
-    grid-template-columns: 45px 1fr 38px;
-
+    display: flex;
     gap: 8px;
-
     margin-bottom: 8px;
-
     align-items: center;
 }
 
-/* Verberg het ongebruikte titelveld */
-.level-builder input:nth-child(2) {
-    display: none;
-}
-
-.level-builder input:first-child {
+/* Score-inputveld */
+.level-builder input {
+    width: 60px;
+    flex-shrink: 0;
     text-align: center;
     font-weight: 800;
     color: var(--accent);
     padding: 10px 4px;
 }
 
+/* Omschrijvingsveld */
 .level-builder textarea {
+    flex: 1;
     min-height: 43px;
     height: 43px;
     resize: vertical;
 }
 
+/* Verwijderknop van het niveau */
 .level-builder .icon-button {
     height: 43px;
     width: 38px;
+    flex-shrink: 0;
 }
 
 .parameter-footer {

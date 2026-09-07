@@ -1436,7 +1436,7 @@ function buildStudentPdf(evaluation, existingDoc = null) {
     currentY += (splitTitle.length * 8) + 2;
 
     // 2. LEERLING & KLAS
-    doc.setFontSize(14);
+    doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...ACCENT_COLOR);
     doc.text(`${student.name} (${cls ? cls.name : "Geen klas"})`, marginX, currentY);
@@ -1449,9 +1449,9 @@ function buildStudentPdf(evaluation, existingDoc = null) {
     currentY += 6;
 
     // 3. META-INFORMATIE (Datum, Leerkracht, Spreekduur)
-    doc.setFontSize(9);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(...SECONDARY_COLOR);
+    doc.setTextColor(...ACCENT_COLOR);
 
     const evalDate = formatDate(evaluation.evaluation_date || evaluation.created_at);
     let metaText = `Datum: ${evalDate}   |   Leerkracht: dhr. J. Vermote`;
@@ -1478,7 +1478,7 @@ function buildStudentPdf(evaluation, existingDoc = null) {
 
         // Bereken benodigde hoogte voor de uitleg
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
+        doc.setFontSize(11);
         const splitExplanation = doc.splitTextToSize(explanationText, 162);
         
         // Compactere hoogte: basishoogte van 16mm + dynamische regels
@@ -1501,7 +1501,7 @@ function buildStudentPdf(evaluation, existingDoc = null) {
 
         // Score per parameter (Groter & Duidelijker in accentkleur)
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
+        doc.setFontSize(12);
         doc.setTextColor(...ACCENT_COLOR);
         doc.text(achievedScoreText, 185, currentY + 6, { align: "right" });
 
@@ -1544,7 +1544,7 @@ function buildStudentPdf(evaluation, existingDoc = null) {
     doc.roundedRect(marginX, currentY, 170, 13, 2, 2, "F");
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(14);
     doc.setTextColor(255, 255, 255);
     doc.text("TOTAALSCORE", marginX + 6, currentY + 8.5);
     doc.text(totalScoreText, 184, currentY + 8.5, { align: "right" });

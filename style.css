@@ -1006,23 +1006,17 @@ textarea {
 
 .parameter-builder {
     border: 1px solid var(--border);
-
     border-radius: 14px;
-
     margin-bottom: 14px;
-
     overflow: hidden;
 }
 
 .parameter-builder-header {
     background: var(--surface-soft);
-
     padding: 13px;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     gap: 10px;
 }
 
@@ -1041,27 +1035,35 @@ textarea {
     padding: 12px;
 }
 
-/* NIVEAU RIJ: Score (60px) | Omschrijving (rest) | Kruisje (38px) */
+/* NIVEAU RIJ: Score (60px) | Titel (120px) | Omschrijving (rest) | Kruisje (38px) */
 .level-builder {
-    display: flex;
+    display: grid;
+    grid-template-columns: 60px 120px minmax(200px, 1fr) 38px;
     gap: 8px;
     margin-bottom: 8px;
-    align-items: center;
+    align-items: flex-start;
 }
 
-/* Score-inputveld */
-.level-builder input {
-    width: 60px;
-    flex-shrink: 0;
+/* Input 1: Score */
+.level-builder input:nth-child(1) {
+    width: 100%;
     text-align: center;
     font-weight: 800;
     color: var(--accent);
     padding: 10px 4px;
 }
 
-/* Omschrijvingsveld */
+/* Input 2: Titel */
+.level-builder input:nth-child(2) {
+    display: block;
+    width: 100%;
+    font-weight: 600;
+    padding: 10px 8px;
+}
+
+/* Textarea: Omschrijving */
 .level-builder textarea {
-    flex: 1;
+    width: 100%;
     min-height: 43px;
     height: 43px;
     resize: vertical;
@@ -1077,11 +1079,8 @@ textarea {
 .parameter-footer {
     display: flex;
     justify-content: space-between;
-
     padding: 10px 12px;
-
     border-top: 1px solid var(--border);
-
     background: var(--surface-soft);
 }
 
@@ -1093,25 +1092,12 @@ textarea {
 .move-button {
     border: none;
     background: transparent;
-
     color: var(--muted);
-
     padding: 4px 7px;
 }
 
 .move-button:hover {
     color: var(--accent);
-}
-
-.editor-footer {
-    margin-top: 30px;
-
-    padding-top: 20px;
-
-    border-top: 1px solid var(--border);
-
-    display: flex;
-    justify-content: flex-end;
 }
 
 

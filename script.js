@@ -1346,33 +1346,200 @@ function exportSelectedStudent() {
         showToast("Geen evaluatie gevonden om te exporteren.");
         return;
     }
-    exportStudentEvaluationPdf(evaluation.id);
-}
+    
+    const doc = buildStudentPdf(evaluation);
+    if (!doc) return;
 
-function exportStudentEvaluationPdf(evaluationId) {
-    const evaluation = state.evaluations.find((item) => item.id === evaluationId);
-    if (!evaluation) return;
-
-    const assignment = state.assignments.find((a) => a.id === evaluation.assignment_id);
-    const student = state.students.find((s) => s.id === evaluation.student_id);
-
-    if (!assignment || !student) return;
-
-    const doc = new window.jspdf.jsPDF();
-    doc.setFontSize(16);
-    doc.text(`${assignment.title} - ${student.name}`, 20, 20);
-
-    const score = calculateEvaluationScore(evaluation, assignment);
-    doc.setFontSize(12);
-    doc.text(`Score: ${score ? `${score.total} / ${score.max}` : "—"}`, 20, 30);
-
-    doc.save(`${student.name} - ${assignment.title}.pdf`);
+    const student = state.students.find((s) => s.id === selectedStudentId);
+    const assignment = state.assignments.find((a) => a.id === selectedAssignmentId);
+    
+    doc.save(`${student?.name || "Leerling"} - ${assignment?.title || "Evaluatie"}.pdf`);
+    showToast("PDF gegenereerd.");
 }
 
 function exportSelectedClass() {
-    showToast("Klas-export PDF wordt gegenereerd...");
+    if (!selectedClassId || !selectedAssignmentId) {
+        showToast("Selecteer eerst een klas en een opdracht.");
+        return;
+    }
+
+    const classStudents = state.students.filter((s) => s.class_id === selectedClassId);
+    const cls = state.classes.find((c) => c.id === selectedClassId);
+    const assignment = state.assignments.find((a) => a.id === selectedAssignmentId);
+
+    if (!classStudents.length) {
+        showToast("Geen leerlingen gevonden in deze klas.");
+        return;
+    }
+
+    let masterDoc = null;
+    let evaluatedCount = 0;
+
+    classStudents.forEach((student) => {
+        const evaluation = getLatestEvaluation(student.id, selectedAssignmentId);
+        if (!evaluation) return; // Sla leerlingen zonder evaluatie over
+
+        evaluatedCount++;
+        
+        if (!masterDoc) {
+            // Eerste pagina
+            masterDoc = buildStudentPdf(evaluation);
+        } else {
+            // Volgende pagina's in dezelfde PDF
+            masterDoc.addPage();
+            buildStudentPdf(evaluation, masterDoc);
+        }
+    });
+
+    if (!masterDoc || evaluatedCount === 0) {
+        showToast("Geen ingevulde evaluaties gevonden voor deze klas.");
+        return;
+    }
+
+    masterDoc.save(`Klas ${cls?.name || ""} - ${assignment?.title || "Evaluaties"}.pdf`);
+    showToast(`PDF voor ${evaluatedCount} leerling(en) gegenereerd.`);
 }
 
+/**
+ * Bouwt één pagina/evaluatie op in een jsPDF document.
+ */
+function buildStudentPdf(evaluation, existingDoc = null) {
+    const assignment = state.assignments.find((a) => a.id === evaluation.assignment_id);
+    const student = state.students.find((s) => s.id === evaluation.student_id);
+    const cls = state.classes.find((c) => c.id === (student?.class_id || evaluation.class_id));
+
+    if (!assignment || !student) {
+        showToast("Fout bij het ophalen van gegevens voor PDF.");
+        return null;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = existingDoc || new jsPDF({ unit: "mm", format: "a4" });
+
+    // Kleurenpalet (gebaseerd op UI)
+    const PRIMARY_COLOR = [30, 41, 59];    // Donkerblauw / Slate 800
+    const SECONDARY_COLOR = [71, 85, 105]; // Slate 600
+    const BG_LIGHT = [248, 250, 252];       // Slate 50
+    const BORDER_COLOR = [226, 232, 240];  // Slate 200
+    const TEXT_MAIN = [15, 23, 42];        // Slate 900
+
+    const marginX = 20;
+    let currentY = 20;
+
+    // 1. TITEL VAN DE OPDRACHT
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(...PRIMARY_COLOR);
+    
+    // Zorg dat lange titels netjes passen
+    const splitTitle = doc.splitTextToSize(assignment.title.toUpperCase(), 170);
+    doc.text(splitTitle, marginX, currentY);
+    currentY += (splitTitle.length * 8) + 2;
+
+    // 2. LEERLING & KLAS
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...TEXT_MAIN);
+    doc.text(`${student.name} (${cls ? cls.name : "Geen klas"})`, marginX, currentY);
+    currentY += 8;
+
+    // Scheidingslijn
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.setLineWidth(0.5);
+    doc.line(marginX, currentY, 190, currentY);
+    currentY += 6;
+
+    // 3. META-INFORMATIE (Datum, Leerkracht, Spreekduur)
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...SECONDARY_COLOR);
+
+    const evalDate = formatDate(evaluation.evaluation_date || evaluation.created_at);
+    let metaText = `Datum: ${evalDate}   |   Leerkracht: dhr. J. Vermote`;
+    
+    if (timerSeconds > 0) {
+        const mins = Math.floor(timerSeconds / 60);
+        const secs = timerSeconds % 60;
+        metaText += `   |   Spreekduur: ${mins}m ${secs}s`;
+    }
+
+    doc.text(metaText, marginX, currentY);
+    currentY += 10;
+
+    // 4. PARAMETERS / CRITERIA (Sectie)
+    (assignment.parameters || []).forEach((param, index) => {
+        const scoreData = evaluation.scores ? evaluation.scores[param.id] : null;
+
+        // Bepaal de maximale score van deze parameter
+        const maxParamScore = param.levels && param.levels.length 
+            ? Math.max(...param.levels.map((l) => Number(l.score))) 
+            : 0;
+
+        const achievedScoreText = scoreData ? `${scoreData.score} / ${maxParamScore}` : `— / ${maxParamScore}`;
+        const explanationText = scoreData?.explanation || "Geen specifieke toelichting gegeven.";
+
+        // Achtergrondblok per criterium
+        doc.setFillColor(...BG_LIGHT);
+        doc.setDrawColor(...BORDER_COLOR);
+        doc.roundedRect(marginX, currentY, 170, 22, 2, 2, "FD");
+
+        // Criterium Titel & Score
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(...PRIMARY_COLOR);
+        doc.text(`${index + 1}. ${param.title}`, marginX + 4, currentY + 7);
+
+        doc.setFont("helvetica", "bold");
+        doc.text(achievedScoreText, 185, currentY + 7, { align: "right" });
+
+        // Uitleg / Beoordeling
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...SECONDARY_COLOR);
+        
+        const splitExplanation = doc.splitTextToSize(explanationText, 162);
+        doc.text(splitExplanation, marginX + 4, currentY + 14);
+
+        currentY += 26;
+    });
+
+    currentY += 2;
+
+    // 5. FEEDBACK
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PRIMARY_COLOR);
+    doc.text("Feedback & Opmerkingen", marginX, currentY);
+    currentY += 5;
+
+    const feedbackText = evaluation.feedback && evaluation.feedback.trim() !== "" 
+        ? evaluation.feedback 
+        : "Geen bijkomende opmerkingen.";
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...TEXT_MAIN);
+
+    const splitFeedback = doc.splitTextToSize(feedbackText, 170);
+    doc.text(splitFeedback, marginX, currentY);
+    
+    currentY += (splitFeedback.length * 5) + 12;
+
+    // 6. TOTAALSCORE (Onderaan)
+    const scoreObj = calculateEvaluationScore(evaluation, assignment);
+    const totalScoreText = scoreObj ? `${scoreObj.total} / ${scoreObj.max}` : "—";
+
+    doc.setFillColor(...PRIMARY_COLOR);
+    doc.roundedRect(marginX, currentY, 170, 14, 2, 2, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text("TOTAALSCORE", marginX + 6, currentY + 9);
+    doc.text(totalScoreText, 184, currentY + 9, { align: "right" });
+
+    return doc;
+}
 /* ============================================================
    ALLES RENDEREN & HELPERS
    ============================================================ */

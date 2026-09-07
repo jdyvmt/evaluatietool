@@ -1416,30 +1416,29 @@ function buildStudentPdf(evaluation, existingDoc = null) {
     const { jsPDF } = window.jspdf;
     const doc = existingDoc || new jsPDF({ unit: "mm", format: "a4" });
 
-    // Kleurenpalet (gebaseerd op UI)
-    const PRIMARY_COLOR = [30, 41, 59];    // Donkerblauw / Slate 800
+    // Kleurenpalet
+    const ACCENT_COLOR = [60, 156, 168];   // #3c9ca8
     const SECONDARY_COLOR = [71, 85, 105]; // Slate 600
-    const BG_LIGHT = [248, 250, 252];       // Slate 50
-    const BORDER_COLOR = [226, 232, 240];  // Slate 200
-    const TEXT_MAIN = [15, 23, 42];        // Slate 900
+    const BG_LIGHT = [248, 250, 252];      // Slate 50
+    const BORDER_COLOR = [226, 232, 240]; // Slate 200
+    const TEXT_MAIN = [15, 23, 42];       // Slate 900
 
     const marginX = 20;
     let currentY = 20;
 
-    // 1. TITEL VAN DE OPDRACHT
+    // 1. TITEL VAN DE OPDRACHT (Gewone hoofdletters/kleine letters zoals ingegeven)
     doc.setFont("helvetica", "bold");
     doc.setFontSize(20);
-    doc.setTextColor(...PRIMARY_COLOR);
+    doc.setTextColor(...ACCENT_COLOR);
     
-    // Zorg dat lange titels netjes passen
-    const splitTitle = doc.splitTextToSize(assignment.title.toUpperCase(), 170);
+    const splitTitle = doc.splitTextToSize(assignment.title, 170);
     doc.text(splitTitle, marginX, currentY);
     currentY += (splitTitle.length * 8) + 2;
 
     // 2. LEERLING & KLAS
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...TEXT_MAIN);
+    doc.setTextColor(...ACCENT_COLOR);
     doc.text(`${student.name} (${cls ? cls.name : "Geen klas"})`, marginX, currentY);
     currentY += 8;
 
@@ -1466,11 +1465,10 @@ function buildStudentPdf(evaluation, existingDoc = null) {
     doc.text(metaText, marginX, currentY);
     currentY += 10;
 
-    // 4. PARAMETERS / CRITERIA (Sectie)
-    (assignment.parameters || []).forEach((param, index) => {
+    // 4. PARAMETERS / CRITERIA
+    (assignment.parameters || []).forEach((param) => {
         const scoreData = evaluation.scores ? evaluation.scores[param.id] : null;
 
-        // Bepaal de maximale score van deze parameter
         const maxParamScore = param.levels && param.levels.length 
             ? Math.max(...param.levels.map((l) => Number(l.score))) 
             : 0;
@@ -1478,39 +1476,52 @@ function buildStudentPdf(evaluation, existingDoc = null) {
         const achievedScoreText = scoreData ? `${scoreData.score} / ${maxParamScore}` : `— / ${maxParamScore}`;
         const explanationText = scoreData?.explanation || "Geen specifieke toelichting gegeven.";
 
-        // Achtergrondblok per criterium
+        // Bereken benodigde hoogte voor de uitleg
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        const splitExplanation = doc.splitTextToSize(explanationText, 162);
+        
+        // Compactere hoogte: basishoogte van 16mm + dynamische regels
+        const boxHeight = Math.max(16, 10 + (splitExplanation.length * 4));
+
+        // Achtergrondblok
         doc.setFillColor(...BG_LIGHT);
         doc.setDrawColor(...BORDER_COLOR);
-        doc.roundedRect(marginX, currentY, 170, 22, 2, 2, "FD");
+        doc.roundedRect(marginX, currentY, 170, boxHeight, 2, 2, "FD");
 
-        // Criterium Titel & Score
+        // Linker accentlijn
+        doc.setFillColor(...ACCENT_COLOR);
+        doc.rect(marginX, currentY, 1.5, boxHeight, "F");
+
+        // Criterium Titel (Zonder nummering)
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        doc.setTextColor(...PRIMARY_COLOR);
-        doc.text(`${index + 1}. ${param.title}`, marginX + 4, currentY + 7);
+        doc.setTextColor(...TEXT_MAIN);
+        doc.text(param.title, marginX + 4, currentY + 6);
 
+        // Score per parameter (Groter & Duidelijker in accentkleur)
         doc.setFont("helvetica", "bold");
-        doc.text(achievedScoreText, 185, currentY + 7, { align: "right" });
+        doc.setFontSize(11);
+        doc.setTextColor(...ACCENT_COLOR);
+        doc.text(achievedScoreText, 185, currentY + 6, { align: "right" });
 
         // Uitleg / Beoordeling
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         doc.setTextColor(...SECONDARY_COLOR);
-        
-        const splitExplanation = doc.splitTextToSize(explanationText, 162);
-        doc.text(splitExplanation, marginX + 4, currentY + 14);
+        doc.text(splitExplanation, marginX + 4, currentY + 12);
 
-        currentY += 26;
+        currentY += boxHeight + 4; // Kortere afstand tussen de blokken
     });
 
-    currentY += 2;
+    currentY += 4;
 
     // 5. FEEDBACK
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...PRIMARY_COLOR);
+    doc.setFontSize(13);
+    doc.setTextColor(...ACCENT_COLOR);
     doc.text("Feedback & Opmerkingen", marginX, currentY);
-    currentY += 5;
+    currentY += 6;
 
     const feedbackText = evaluation.feedback && evaluation.feedback.trim() !== "" 
         ? evaluation.feedback 
@@ -1523,20 +1534,20 @@ function buildStudentPdf(evaluation, existingDoc = null) {
     const splitFeedback = doc.splitTextToSize(feedbackText, 170);
     doc.text(splitFeedback, marginX, currentY);
     
-    currentY += (splitFeedback.length * 5) + 12;
+    currentY += (splitFeedback.length * 5) + 10;
 
-    // 6. TOTAALSCORE (Onderaan)
+    // 6. TOTAALSCORE
     const scoreObj = calculateEvaluationScore(evaluation, assignment);
     const totalScoreText = scoreObj ? `${scoreObj.total} / ${scoreObj.max}` : "—";
 
-    doc.setFillColor(...PRIMARY_COLOR);
-    doc.roundedRect(marginX, currentY, 170, 14, 2, 2, "F");
+    doc.setFillColor(...ACCENT_COLOR);
+    doc.roundedRect(marginX, currentY, 170, 13, 2, 2, "F");
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(255, 255, 255);
-    doc.text("TOTAALSCORE", marginX + 6, currentY + 9);
-    doc.text(totalScoreText, 184, currentY + 9, { align: "right" });
+    doc.text("TOTAALSCORE", marginX + 6, currentY + 8.5);
+    doc.text(totalScoreText, 184, currentY + 8.5, { align: "right" });
 
     return doc;
 }

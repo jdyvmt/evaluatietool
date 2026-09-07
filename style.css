@@ -982,12 +982,18 @@ textarea {
     background: white;
 
     width: 40px;
+    height: 40px;
 
     border-radius: 10px;
 
     color: var(--muted);
 
     font-weight: 800;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .icon-button:hover {
@@ -1015,8 +1021,9 @@ textarea {
 
     display: flex;
     align-items: center;
+    justify-content: space-between;
 
-    gap: 8px;
+    gap: 10px;
 }
 
 .parameter-drag {
@@ -1034,29 +1041,40 @@ textarea {
     padding: 12px;
 }
 
+/* NIVEAU RIJ: Score (45px) | Omschrijving (rest) | Kruisje (38px) */
 .level-builder {
     display: grid;
 
-    /* 1: Score (smal) | 2: Titel (25%) | 3: Omschrijving (rest) | 4: Verwijderknop */
-    grid-template-columns: 50px 25% minmax(0, 1fr) 38px;
+    grid-template-columns: 45px 1fr 38px;
 
-    gap: 7px;
+    gap: 8px;
 
-    margin-bottom: 7px;
+    margin-bottom: 8px;
 
-    align-items: start;
+    align-items: center;
+}
+
+/* Verberg het ongebruikte titelveld */
+.level-builder input:nth-child(2) {
+    display: none;
 }
 
 .level-builder input:first-child {
     text-align: center;
     font-weight: 800;
     color: var(--accent);
+    padding: 10px 4px;
 }
 
 .level-builder textarea {
     min-height: 43px;
     height: 43px;
     resize: vertical;
+}
+
+.level-builder .icon-button {
+    height: 43px;
+    width: 38px;
 }
 
 .parameter-footer {

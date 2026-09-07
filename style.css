@@ -1013,11 +1013,11 @@ textarea {
 
 .parameter-builder-header {
     background: var(--surface-soft);
-    padding: 13px;
+    padding: 12px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
 }
 
 .parameter-drag {
@@ -1035,45 +1035,64 @@ textarea {
     padding: 12px;
 }
 
-/* NIVEAU RIJ: Score (8%) | Titel (20%) | Omschrijving (rest) | Kruisje (38px) */
+/* NIVEAU RIJ: Strakke flexbox-indeling op 1 lijn */
 .level-builder {
-    display: grid;
-    /* 1: Score (8%) | 2: Titel (20%) | 3: Omschrijving (rest) | 4: Kruisje (vaste maat) */
-    grid-template-columns: 8% 20% minmax(0, 1fr) 38px;
-    gap: 8px;
-    margin-bottom: 8px;
-    align-items: center; /* Zorgt dat alles op één horizontale lijn blijft */
-}
-
-/* Zorg dat de velden de breedte van hun grid-kolom exact volgen */
-.level-builder input,
-.level-builder textarea {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-bottom: 10px;
     width: 100%;
-    box-sizing: border-box; /* Voorkomt dat padding het veld breder maakt dan het grid */
 }
 
-/* Extra fijne afstemming voor de compacte velden */
-.level-builder input:nth-child(1) {
+/* Verberg de labels boven de velden binnen een niveau */
+.level-builder label {
+    display: none !important;
+}
+
+/* Volgnummer */
+.level-builder > span,
+.level-builder > div:first-child {
+    font-weight: 700;
+    color: var(--muted);
+    min-width: 15px;
+}
+
+/* Scoreveld (Smal) */
+.level-builder input[type="number"],
+.level-builder input:nth-of-type(1) {
+    width: 65px !important;
+    flex-shrink: 0;
     text-align: center;
     font-weight: 800;
-    padding: 10px 2px; /* Iets minder opvulling links/rechts bij smalle score */
+    color: var(--accent);
+    padding: 10px 4px;
 }
 
-.level-builder input:nth-child(2) {
+/* Titelveld (Dubbele breedte van score) */
+.level-builder input[type="text"]:nth-of-type(1),
+.level-builder input:nth-of-type(2) {
+    width: 140px !important;
+    flex-shrink: 0;
     font-weight: 600;
-    padding: 10px 6px;
+    padding: 10px 8px;
 }
 
+/* Omschrijvingsveld (Maximale resterende ruimte) */
 .level-builder textarea {
-    min-height: 43px;
-    height: 43px;
+    flex: 1 !important;
+    width: 100% !important;
+    min-height: 42px;
+    height: 42px;
     resize: vertical;
 }
 
-.level-builder .icon-button {
-    height: 43px;
-    width: 38px;
+/* Kruisje om niveau te verwijderen */
+.level-builder .icon-button,
+.level-builder button {
+    width: 38px !important;
+    height: 42px !important;
     flex-shrink: 0;
+    margin: 0 !important;
 }
 
 .parameter-footer {
@@ -1098,6 +1117,14 @@ textarea {
 
 .move-button:hover {
     color: var(--accent);
+}
+
+.editor-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
 }
 
 

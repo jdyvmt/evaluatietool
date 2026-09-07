@@ -1035,41 +1035,41 @@ textarea {
     padding: 12px;
 }
 
-/* NIVEAU RIJ: Score (60px) | Titel (120px) | Omschrijving (rest) | Kruisje (38px) */
+/* NIVEAU RIJ: Score (8%) | Titel (20%) | Omschrijving (rest) | Kruisje (38px) */
 .level-builder {
     display: grid;
-    grid-template-columns: 30px 40px minmax(200px, 1fr) 38px;
+    /* 1: Score (8%) | 2: Titel (20%) | 3: Omschrijving (rest) | 4: Kruisje (vaste maat) */
+    grid-template-columns: 8% 20% minmax(0, 1fr) 38px;
     gap: 8px;
     margin-bottom: 8px;
-    align-items: flex-start;
+    align-items: center; /* Zorgt dat alles op één horizontale lijn blijft */
 }
 
-/* Input 1: Score */
-.level-builder input:nth-child(1) {
-    width: 100%;
-    text-align: center;
-    font-weight: 800;
-    color: var(--accent);
-    padding: 10px 4px;
-}
-
-/* Input 2: Titel */
-.level-builder input:nth-child(2) {
-    display: block;
-    width: 100%;
-    font-weight: 600;
-    padding: 10px 8px;
-}
-
-/* Textarea: Omschrijving */
+/* Zorg dat de velden de breedte van hun grid-kolom exact volgen */
+.level-builder input,
 .level-builder textarea {
     width: 100%;
+    box-sizing: border-box; /* Voorkomt dat padding het veld breder maakt dan het grid */
+}
+
+/* Extra fijne afstemming voor de compacte velden */
+.level-builder input:nth-child(1) {
+    text-align: center;
+    font-weight: 800;
+    padding: 10px 2px; /* Iets minder opvulling links/rechts bij smalle score */
+}
+
+.level-builder input:nth-child(2) {
+    font-weight: 600;
+    padding: 10px 6px;
+}
+
+.level-builder textarea {
     min-height: 43px;
     height: 43px;
     resize: vertical;
 }
 
-/* Verwijderknop van het niveau */
 .level-builder .icon-button {
     height: 43px;
     width: 38px;

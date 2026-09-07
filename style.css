@@ -1038,7 +1038,7 @@ textarea {
 /* NIVEAU RIJ: Score (60px) | Titel (120px) | Omschrijving (rest) | Kruisje (38px) */
 .level-builder {
     display: grid;
-    grid-template-columns: 60px 120px minmax(200px, 1fr) 38px;
+    grid-template-columns: 30px 40px minmax(200px, 1fr) 38px;
     gap: 8px;
     margin-bottom: 8px;
     align-items: flex-start;

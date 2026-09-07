@@ -1002,13 +1002,13 @@ textarea {
 }
 
 
-/* parameter builder */
-
+/* PARAMETER BUILDER CONTAINER */
 .parameter-builder {
     border: 1px solid var(--border);
     border-radius: 14px;
     margin-bottom: 14px;
     overflow: hidden;
+    width: 100%;
 }
 
 .parameter-builder-header {
@@ -1020,12 +1020,6 @@ textarea {
     gap: 12px;
 }
 
-.parameter-drag {
-    color: var(--muted);
-    cursor: grab;
-    font-size: 15px;
-}
-
 .parameter-title-input {
     flex: 1;
     font-weight: 700;
@@ -1033,68 +1027,72 @@ textarea {
 
 .level-builder-list {
     padding: 12px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-/* NIVEAU RIJ: Strakke flexbox-indeling op 1 lijn */
+/* NIVEAU RIJ: Gebruikt de VOLLEDIGE pagina-breedte */
 .level-builder {
     display: flex !important;
     align-items: center !important;
-    gap: 10px !important;
+    gap: 12px !important;
     margin-bottom: 10px;
-    width: 100%;
+    width: 100% !important;
+    box-sizing: border-box;
 }
 
-/* Verberg de labels boven de velden binnen een niveau */
+/* Verberg onnodige labels */
 .level-builder label {
     display: none !important;
 }
 
-/* Volgnummer */
+/* Verberg het tweede inputveld (Titel) als je dat niet gebruikt */
+.level-builder input:nth-of-type(2) {
+    display: none !important;
+}
+
+/* 1. Volgnummer */
 .level-builder > span,
 .level-builder > div:first-child {
     font-weight: 700;
     color: var(--muted);
-    min-width: 15px;
+    min-width: 20px;
+    flex-shrink: 0;
 }
 
-/* Scoreveld (Smal) */
+/* 2. Scoreveld (Kort & Compact) */
 .level-builder input[type="number"],
-.level-builder input:nth-of-type(1) {
+.level-builder input:first-of-type {
     width: 65px !important;
-    flex-shrink: 0;
+    min-width: 65px !important;
+    max-width: 65px !important;
+    flex-shrink: 0 !important;
     text-align: center;
     font-weight: 800;
     color: var(--accent);
     padding: 10px 4px;
+    box-sizing: border-box;
 }
 
-/* Titelveld (Dubbele breedte van score) */
-.level-builder input[type="text"]:nth-of-type(1),
-.level-builder input:nth-of-type(2) {
-    width: 65px !important;
-    flex-shrink: 0;
-    font-weight: 600;
-    padding: 10px 8px;
-}
-
-/* Omschrijvingsveld (Maximale resterende ruimte) */
+/* 3. Omschrijvingsveld (Vult ALLE overgebleven breedte van het scherm) */
 .level-builder textarea {
-    flex: 1 !important;
-    width: 300px !important;
+    flex: 1 1 auto !important;
+    width: 100% !important;
     min-height: 42px;
     height: 42px;
     resize: vertical;
+    box-sizing: border-box;
 }
 
-/* Kruisje om niveau te verwijderen */
+/* 4. Verwijderknop (Kruisje) */
 .level-builder .icon-button,
 .level-builder button {
     width: 38px !important;
+    min-width: 38px !important;
     height: 42px !important;
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
     margin: 0 !important;
 }
-
 .parameter-footer {
     display: flex;
     justify-content: space-between;

@@ -220,13 +220,21 @@ function renderEvaluationSelectors() {
 
     if (!assignmentSelect || !classSelect) return;
 
+    // Sorteer opdrachten op volgorde
+    const sortedAssignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
     assignmentSelect.innerHTML = `<option value="">Kies een opdracht...</option>`;
-    state.assignments.forEach((assignment) => {
+    sortedAssignments.forEach((assignment) => {
         assignmentSelect.innerHTML += `<option value="${escapeHtml(assignment.id)}">${escapeHtml(assignment.title)}</option>`;
     });
 
+    // Sorteer klassen alfabetisch op naam
+    const sortedClasses = [...state.classes].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+    );
+
     classSelect.innerHTML = `<option value="">Kies een klas...</option>`;
-    state.classes.forEach((cls) => {
+    sortedClasses.forEach((cls) => {
         classSelect.innerHTML += `<option value="${escapeHtml(cls.id)}">${escapeHtml(cls.name)}</option>`;
     });
 

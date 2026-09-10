@@ -1606,3 +1606,43 @@ textarea {
         max-width: none;
     }
 }
+
+.assignment-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.assignment-item-main {
+    flex-grow: 1;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.assignment-order-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-left: 8px;
+}
+
+.order-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 10px;
+    padding: 2px 4px;
+    opacity: 0.6;
+}
+
+.order-btn:hover:not(:disabled) {
+    opacity: 1;
+}
+
+.order-btn:disabled {
+    opacity: 0.15;
+    cursor: default;
+}

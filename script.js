@@ -711,6 +711,7 @@ function createNewAssignment() {
     const assignment = {
         id: createId("assignment_"),
         title: "Nieuwe opdracht",
+        order: state.assignments.length,
         comments: [],
         parameters: [
             {
@@ -1010,22 +1011,32 @@ function renderAssignments() {
         return;
     }
 
-    container.innerHTML = state.assignments
-        .map((assignment) => {
+    // Sorteer opdrachten op volgorde
+    const sortedAssignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    container.innerHTML = sortedAssignments
+        .map((assignment, index) => {
             const active = assignment.id === editingAssignmentId;
             const parameterCount = assignment.parameters?.length || 0;
+            const isFirst = index === 0;
+            const isLast = index === sortedAssignments.length - 1;
 
             return `
-                <button type="button" class="assignment-item ${active ? "active" : ""}" data-assignment-id="${escapeHtml(assignment.id)}">
-                    <div class="assignment-item-main">
+                <div class="assignment-item ${active ? "active" : ""}">
+                    <button type="button" class="assignment-item-main" data-assignment-id="${escapeHtml(assignment.id)}">
                         <strong>${escapeHtml(assignment.title)}</strong>
                         <span>${parameterCount} ${parameterCount === 1 ? "criterium" : "criteria"}</span>
+                    </button>
+                    <div class="assignment-order-actions">
+                        <button type="button" class="order-btn" data-move-up="${escapeHtml(assignment.id)}" ${isFirst ? "disabled" : ""}>▲</button>
+                        <button type="button" class="order-btn" data-move-down="${escapeHtml(assignment.id)}" ${isLast ? "disabled" : ""}>▼</button>
                     </div>
-                </button>
+                </div>
             `;
         })
         .join("");
 
+    // Klikken op de opdracht om te openen
     container.querySelectorAll("[data-assignment-id]").forEach((button) => {
         button.addEventListener("click", () => {
             editingAssignmentId = button.dataset.assignmentId;
@@ -1033,6 +1044,51 @@ function renderAssignments() {
             openAssignmentEditor();
         });
     });
+
+    // Pijltje omhoog
+    container.querySelectorAll("[data-move-up]").forEach((button) => {
+        button.addEventListener("click", (e) => {
+            e.stopPropagation();
+            moveAssignment(button.dataset.moveUp, -1);
+        });
+    });
+
+    // Pijltje omlaag
+    container.querySelectorAll("[data-move-down]").forEach((button) => {
+        button.addEventListener("click", (e) => {
+            e.stopPropagation();
+            moveAssignment(button.dataset.moveDown, 1);
+        });
+    });
+}
+
+async function moveAssignment(assignmentId, direction) {
+    const sorted = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const currentIndex = sorted.findIndex((a) => a.id === assignmentId);
+    const targetIndex = currentIndex + direction;
+
+    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+
+    // Wissel posities
+    const current = sorted[currentIndex];
+    const target = sorted[targetIndex];
+
+    const tempOrder = current.order ?? currentIndex;
+    current.order = target.order ?? targetIndex;
+    target.order = tempOrder;
+
+    renderAssignments();
+
+    // Sla nieuwe volgorde op in Firebase
+    try {
+        await Promise.all([
+            dbUpdate("assignments", current.id, { order: current.order }),
+            dbUpdate("assignments", target.id, { order: target.order })
+        ]);
+    } catch (error) {
+        console.error("Fout bij opslaan volgorde:", error);
+        showToast("Volgorde kon niet worden opgeslagen.");
+    }
 }
 
 /* ============================================================
@@ -1081,7 +1137,12 @@ function renderClasses() {
         return;
     }
 
-    container.innerHTML = state.classes
+    // Sorteer klassen alfabetisch op naam
+    const sortedClasses = [...state.classes].sort((a, b) => 
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+    );
+
+    container.innerHTML = sortedClasses
         .map((cls) => {
             const count = state.students.filter((s) => s.class_id === cls.id).length;
             return `

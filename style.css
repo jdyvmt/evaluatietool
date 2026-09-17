@@ -1036,24 +1036,17 @@ textarea {
     display: flex !important;
     align-items: center !important;
     gap: 12px !important;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     width: 100% !important;
     box-sizing: border-box;
 }
 
-/* Verberg onnodige labels */
+/* 1. Volgnummer (verberg de automatische labels) */
 .level-builder label {
     display: none !important;
 }
 
-/* Verberg het tweede inputveld (Titel) als je dat niet gebruikt */
-.level-builder input:nth-of-type(2) {
-    display: none !important;
-}
-
-/* 1. Volgnummer */
-.level-builder > span,
-.level-builder > div:first-child {
+.level-builder > .level-number {
     font-weight: 700;
     color: var(--muted);
     min-width: 20px;
@@ -1061,8 +1054,8 @@ textarea {
 }
 
 /* 2. Scoreveld (Kort & Compact) */
-.level-builder input[type="number"],
-.level-builder input:first-of-type {
+.level-builder .level-score-input,
+.level-builder input[data-level-score] {
     width: 65px !important;
     min-width: 65px !important;
     max-width: 65px !important;
@@ -1070,23 +1063,29 @@ textarea {
     text-align: center;
     font-weight: 800;
     color: var(--accent);
-    padding: 10px 4px;
-    box-sizing: border-box;
 }
 
-/* 3. Omschrijvingsveld (Vult ALLE overgebleven breedte van het scherm) */
-.level-builder textarea {
+/* 3. Verberg het overbodige titelveld */
+.level-builder .level-title-input {
+    display: none !important;
+}
+
+/* 4. Omschrijvingsveld (Neemt alle overgebleven ruimte in + is hoger) */
+.level-builder .level-explanation-input {
     flex: 1 1 auto !important;
     width: 100% !important;
-    min-height: 42px;
-    height: 42px;
-    resize: vertical;
-    box-sizing: border-box;
 }
 
-/* 4. Verwijderknop (Kruisje) */
-.level-builder .icon-button,
-.level-builder button {
+.level-builder input[data-level-explanation],
+.level-builder textarea[data-level-explanation] {
+    width: 100% !important;
+    min-height: 60px; /* Vaste comfortabele hoogte */
+    padding: 8px 12px;
+    line-height: 1.4;
+}
+
+/* 5. Verwijderknop (Kruisje) */
+.level-builder .icon-button {
     width: 38px !important;
     min-width: 38px !important;
     height: 42px !important;

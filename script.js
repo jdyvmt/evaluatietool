@@ -732,7 +732,8 @@ function createNewAssignment() {
                     { id: createId("level_"), score: 1, title: "", explanation: "Zeer onvoldoende" }
                 ]
             }
-        ]
+        ],
+        isNew: true // Markeer als nog niet opgeslagen in Firebase
     };
 
     state.assignments.push(assignment);
@@ -945,11 +946,11 @@ async function saveAssignment() {
     assignment.parameters.forEach((p) => p.levels.forEach((l) => (l.score = Number(l.score))));
 
     try {
-        const existing = state.assignments.find((item) => item.id === assignment.id);
-        if (existing) {
-            await dbUpdate("assignments", assignment.id, assignment);
-        } else {
+        if (assignment.isNew) {
+            delete assignment.isNew; // Verwijder de tijdelijke vlag
             await dbInsert("assignments", assignment);
+        } else {
+            await dbUpdate("assignments", assignment.id, assignment);
         }
         renderAssignments();
         showToast("Opdracht opgeslagen.");

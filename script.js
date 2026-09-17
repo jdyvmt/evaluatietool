@@ -246,16 +246,22 @@ function renderEvaluationStudents() {
     const container = document.getElementById("studentList");
     if (!container) return;
 
-    if (!selectedClassId) {
-        container.innerHTML = `<div class="empty-state small">Kies eerst een klas.</div>`;
+    const search = document.getElementById("studentSearch")?.value.trim().toLowerCase() || "";
+
+    // Als er NIET gezocht wordt, verplicht een klasselectie
+    if (!search && !selectedClassId) {
+        container.innerHTML = `<div class="empty-state small">Kies een klas of zoek op naam.</div>`;
         return;
     }
 
-    let students = state.students.filter((student) => student.class_id === selectedClassId);
-    const search = document.getElementById("studentSearch")?.value.trim().toLowerCase() || "";
+    let students = [];
 
     if (search) {
-        students = students.filter((student) => student.name.toLowerCase().includes(search));
+        // ZOEKMODUS: Zoek over ALLE klassen heen
+        students = state.students.filter((student) => student.name.toLowerCase().includes(search));
+    } else {
+        // KLASMODUS: Filter enkel op de geselecteerde klas
+        students = state.students.filter((student) => student.class_id === selectedClassId);
     }
 
     if (filterUnevaluated && selectedAssignmentId) {
@@ -267,15 +273,22 @@ function renderEvaluationStudents() {
         return;
     }
 
+    // Sorteer alfabetisch op familienaam
+    students.sort(compareByLastName);
+
     container.innerHTML = students
         .map((student) => {
             const evaluated = selectedAssignmentId && hasEvaluation(student.id, selectedAssignmentId);
             const active = student.id === selectedStudentId;
             const retakeCount = getEvaluationHistory(student.id, selectedAssignmentId).filter((e) => e.attempt_number > 1).length;
+            
+            // Toon de klasnaam bij de zoekresultaten als er over alle klassen gezocht wordt
+            const cls = search ? state.classes.find((c) => c.id === student.class_id) : null;
+            const classLabel = cls ? `<span class="muted" style="font-size: 10px; margin-left: 5px;">(${escapeHtml(cls.name)})</span>` : "";
 
             return `
                 <button class="student-item ${active ? "active" : ""}" data-student-id="${escapeHtml(student.id)}">
-                    <span class="student-name">${escapeHtml(student.name)}</span>
+                    <span class="student-name">${escapeHtml(student.name)} ${classLabel}</span>
                     ${evaluated ? `<span class="student-check">✓</span>` : ""}
                     ${retakeCount ? `<span class="student-retake">${retakeCount}x herk.</span>` : ""}
                 </button>
@@ -286,6 +299,15 @@ function renderEvaluationStudents() {
     container.querySelectorAll(".student-item").forEach((button) => {
         button.addEventListener("click", () => {
             selectedStudentId = button.dataset.studentId;
+            
+            // Pas automatisch de gekozen klas aan op basis van de geselecteerde leerling
+            const student = state.students.find((s) => s.id === selectedStudentId);
+            if (student && student.class_id) {
+                selectedClassId = student.class_id;
+                const classSelect = document.getElementById("evaluationClass");
+                if (classSelect) classSelect.value = selectedClassId;
+            }
+
             currentEvaluationId = null;
             isRetake = false;
             resetTimer();
@@ -1202,6 +1224,9 @@ function renderStudentsTable(students) {
         return;
     }
 
+    // Sorteer op familienaam
+    const sortedStudents = [...students].sort(compareByLastName);
+
     container.innerHTML = `
         <table class="students-table">
             <thead>
@@ -1212,7 +1237,7 @@ function renderStudentsTable(students) {
                 </tr>
             </thead>
             <tbody>
-                ${students
+                ${sortedStudents
                     .map((student) => {
                         const evaluations = state.evaluations.filter((e) => e.student_id === student.id).length;
                         return `
@@ -1232,6 +1257,8 @@ function renderStudentsTable(students) {
             </tbody>
         </table>
     `;
+
+    // ... (rest van de event listeners in renderStudentsTable blijft hetzelfde)
 
     container.querySelectorAll("[data-student-detail]").forEach((button) => {
         button.addEventListener("click", () => openStudentDetail(button.dataset.studentDetail));
@@ -1679,4 +1706,27 @@ function showToast(message) {
 
     clearTimeout(showToast.timeout);
     showToast.timeout = setTimeout(() => toast.classList.remove("show"), 2500);
+}
+
+/**
+ * Haalt de familienaam op uit een volledige naam (alles vanaf het 2e woord).
+ * Als er maar 1 woord is, gebruikt hij die naam.
+ */
+function getLastName(fullName) {
+    if (!fullName) return "";
+    const parts = fullName.trim().split(/\s+/);
+    return parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
+}
+
+/**
+ * Sorteerfunctie voor leerlingen op basis van familienaam (en voornaam als secundaire sortering).
+ */
+function compareByLastName(a, b) {
+    const lastNameA = getLastName(a.name);
+    const lastNameB = getLastName(b.name);
+    
+    const lastNameCompare = lastNameA.localeCompare(lastNameB, undefined, { numeric: true, sensitivity: "base" });
+    if (lastNameCompare !== 0) return lastNameCompare;
+    
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
 }

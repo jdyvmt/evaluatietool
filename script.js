@@ -1330,6 +1330,21 @@ function openStudentDetail(studentId) {
     panel.classList.remove("hidden");
     document.getElementById("studentDetailName").textContent = student.name;
 
+    // Vul het keuzemenu met alle beschikbare klassen
+    const select = document.getElementById("studentClassChange");
+    if (select) {
+        const sortedClasses = [...state.classes].sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+        );
+
+        select.innerHTML = sortedClasses
+            .map((cls) => `<option value="${escapeHtml(cls.id)}">${escapeHtml(cls.name)}</option>`)
+            .join("");
+
+        // Selecteer de huidige klas van de leerling
+        select.value = student.class_id;
+    }
+
     renderStudentEvaluationHistory();
 }
 
@@ -1367,6 +1382,9 @@ async function saveStudentClass() {
         await dbUpdate("students", selectedDetailStudentId, { class_id: select.value });
         const student = state.students.find((s) => s.id === selectedDetailStudentId);
         if (student) student.class_id = select.value;
+
+        // Sluit het detailvenster en herlaad de tabellen
+        document.getElementById("studentDetail")?.classList.add("hidden");
         renderAll();
         showToast("Klas van de leerling opgeslagen.");
     } catch (error) {
@@ -1374,7 +1392,6 @@ async function saveStudentClass() {
         showToast("Opslaan mislukt.");
     }
 }
-
 function renderClassScores() {
     const container = document.getElementById("classScores");
     if (!container) return;

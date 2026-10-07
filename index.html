@@ -12,6 +12,9 @@
         <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
         <meta http-equiv="pragma" content="no-cache" />
 
+        <link rel="stylesheet" href="style.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
         <style>
             .staticrypt-hr {
                 margin-top: 20px;
@@ -42,10 +45,10 @@
             input[type="text"] {
                 background: inherit;
                 border: 0;
-                box-sizing: border-box; /* This ensures padding is included in the total width */
+                box-sizing: border-box;
                 font-size: 14px;
                 outline: 0;
-                padding: 15px 30px 15px 15px; /* Adjust the padding to ensure there is space for the icon */
+                padding: 15px 30px 15px 15px;
                 width: 100%;
             }
 
@@ -149,26 +152,11 @@
                 border-radius: 50%;
                 -webkit-animation: spinner-border 0.75s linear infinite;
                 animation: spinner-border 0.75s linear infinite;
-                animation-duration: 0.75s;
-                animation-timing-function: linear;
-                animation-delay: 0s;
-                animation-iteration-count: infinite;
-                animation-direction: normal;
-                animation-fill-mode: none;
-                animation-play-state: running;
-                animation-name: spinner-border;
             }
 
             @keyframes spinner-border {
                 100% {
                     transform: rotate(360deg);
-                }
-            }
-
-            @media screen and (-webkit-min-device-pixel-ratio: 0) {
-                .staticrypt-form input[type="password"],
-                input[type="text"] {
-                    font-size: 16px;
                 }
             }
         </style>
@@ -198,12 +186,11 @@
                                 placeholder="Password"
                                 autofocus
                             />
-
                             <img
                                 class="staticrypt-toggle-password-visibility"
                                 alt="template_toggle_show"
                                 title="template_toggle_show"
-                                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NDAgNTEyIj48IS0tIUZvbnQgQXdlc29tZSBGcmVlIDYuNS4yIGJ5IEBmb250YXdlc29tZSAtIGh0dHBzOi8vZm9udGF3ZXNvbWUuY29tIExpY2Vuc2UgLSBodHRwczovL2ZvbnRhd2Vzb21lLmNvbS9saWNlbnNlL2ZyZWUgQ29weXJpZ2h0IDIwMjQgRm9udGljb25zLCBJbmMuLS0+PHBhdGggZD0iTTM4LjggNS4xQzI4LjQtMy4xIDEzLjMtMS4yIDUuMSA5LjJTLTEuMiAzNC43IDkuMiA0Mi45bDU5MiA0NjRjMTAuNCA4LjIgMjUuNSA2LjMgMzMuNy00LjFzNi4zLTI1LjUtNC4xLTMzLjdMNTI1LjYgMzg2LjdjMzkuNi00MC42IDY2LjQtODYuMSA3OS45LTExOC40YzMuMy03LjkgMy4zLTE2LjcgMC0yNC42Yy0xNC45LTM1LjctNDYuMi04Ny43LTkzLTEzMS4xQzQ2NS41IDY4LjggNDAwLjggMzIgMzIwIDMyYy02OC4yIDAtMTI1IDI2LjMtMTY5LjMgNjAuOEwzOC44IDUuMXpNMjIzLjEgMTQ5LjVDMjQ4LjYgMTI2LjIgMjgyLjcgMTEyIDMyMCAxMTJjNzkuNSAwIDE0NCA2NC41IDE0NCAxNDRjMCAyNC45LTYuMyA0OC4zLTE3LjQgNjguN0w0MDggMjk0LjVjOC40LTE5LjMgMTAuNi00MS40IDQuOC02My4zYy0xMS4xLTQxLjUtNDcuOC02OS40LTg4LjYtNzEuMWMtNS44LS4yLTkuMiA2LjEtNy40IDExLjdjMi4xIDYuNCAzLjMgMTMuMiAzLjMgMjAuM2MwIDEwLjItMi40IDE5LjgtNi42IDI4LjNsLTkwLjMtNzAuOHpNMzczIDM4OS45Yy0xNi40IDYuNS0zNC4zIDEwLjEtNTMgMTAuMWMtNzkuNSAwLTE0NC02NC41LTE0NC0xNDRjMC02LjkgLjUtMTMuNiAxLjQtMjAuMkw4My4xIDE2MS41QzYwLjMgMTkxLjIgNDQgMjIwLjggMzQuNSAyNDMuN2MtMy4zIDcuOS0zLjMgMTYuNyAwIDI0LjZjMTQuOSAzNS43IDQ2LjIgODcuNyA5MyAxMzEuMUMxNzQuNSA0NDMuMiAyMzkuMiA0ODAgMzIwIDQ4MGM0Ny44IDAgODkuOS0xMi45IDEyNi4yLTMyLjVMMzczIDM4OS45eiIvPjwvc3ZnPg=="
+                                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NDAgNTEyIj48IS0tIUZvbnQgQXdlc29tZSBGcmVlIDYuNS4yIGJ5IEBmb250YXdlc29tZSAtIGh0dHBzOi8vZm9udGF3ZXNvbWUuY29tIExpY2Vuc2UgLSBodHRwczovL2ZvbnRhd2Vzb21lLmNvbS9saWNlbnNlL2ZyZWUgQ29weXJpZ2h0IDIwMjQgRm9udGljb25zLCBJbmMuLS0+PHBhdGggZD0iTTM4LjggNS4xQzI4LjQtMy4xIDEzLjMtMS4yIDUuMSA5LjJTLTEuMiAzNC43IDkuMiA0Mi45bDU5MiA0NjRjMTAuNCA4LjIgMjUuNSA2LjMgMzMuNy00LjFzNi4zLTI1LjUtNC4xLTMzLjdLNTI1LjYgMzg2LjdjMzkuNi00MC42IDY2LjQtODYuMSA3OS45LTExOC40YzMuMy03LjkgMy4zLTE2LjcgMC0yNC42Yy0xNC45LTM1LjctNDYuMi04Ny43LTkzLTEzMS4xQzQ2NS41IDY4LjggNDAwLjggMzIgMzIwIDMyYy02OC4yIDAtMTI1IDI2LjMtMTY5LjMgNjAuOEwzOC44IDUuMXpNMjIzLjEgMTQ5LjVDMjQ4LjYgMTI2LjIgMjgyLjcgMTEyIDMyMCAxMTJjNzkuNSAwIDE0NCA2NC41IDE0NCAxNDRjMCAyNC45LTYuMyA0OC4zLTE3LjQgNjguN0w0MDggMjk0LjVjOC40LTE5LjMgMTAuNi00MS40IDQuOC02My4zYy0xMS4xLTQxLjUtNDcuOC02OS40LTg4LjYtNzEuMWMtNS44LS4yLTkuMiA2LjEtNy40IDExLjdjMi4xIDYuNCAzLjMgMTMuMiAzLjMgMjAuM2MwIDEwteo2Mi40IDE5LjgtNi42IDI4LjNsLTkwLjMtNzAuOHpNMzczIDM4OS45Yy0xNi40IDYuNS0zNC4zIDEwLjEtNTMgMTAuMWMtNzkuNSAwLTE0NC02NC41LTE0NC0xNDRjMC02LjkgLjUtMTMuNiAxLjQtMjAuMkw4My4xIDE2MS41QzYwLjMgMTkxLjIgNDQgMjIwLjggMzQuNSAyNDMuN2MtMy4zIDcuOS0zLjMgMTYuNyAwIDI0LjZjMTQuOSAzNS43IDQ2LjIgODcuNyA5MyAxMzEuMUMxNzQuNSA0NDMuMiAyMzkuMiA0ODAgMzIwIDQ4MGM0Ny44IDAgODkuOS0xMi45IDEyNi4yLTMyLjVMMzczIDM4OS45eiIvPjwvc3ZnPg=="
                             />
                         </div>
 
@@ -217,617 +204,521 @@
                 </div>
             </div>
         </div>
-<div class="class-tabs">
-    <button class="class-tab active" data-tab-target="tabStudents">Leerlingen</button>
-</div>
 
-<div id="tabStudents" class="class-tab-content">
-    <div id="studentsTable"></div>
-</div>
+        <!-- TOPBAR -->
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark">E</div>
+                <div>
+                    <div class="brand-title">EVALUATIETOOL</div>
+                    <div class="brand-subtitle">Atheneum Brugge</div>
+                </div>
+            </div>
+            <nav class="main-nav">
+                <button class="nav-button active" data-page="evaluationPage">Evaluatie</button>
+                <button class="nav-button" data-page="assignmentsPage">Opdrachten</button>
+                <button class="nav-button" data-page="studentsPage">Klassen & Leerlingen</button>
+            </nav>
+            <div class="connection-status">
+                <span id="connectionDot"></span>
+                <span id="connectionText">Verbinden...</span>
+            </div>
+        </header>
 
-<div id="tabScores" class="class-tab-content hidden">
-    <div id="classScoresContainer"></div>
-</div>
+        <main>
+            <!-- EVALUATIE PAGINA -->
+            <section id="evaluationPage" class="page active-page">
+                <div class="page-header">
+                    <div>
+                        <span class="eyebrow">BEOORDELING</span>
+                        <h1>Evaluatie</h1>
+                        <p>Evalueer leerlingen per opdracht aan de hand van criteria en snelle feedback.</p>
+                    </div>
+                </div>
+
+                <div class="evaluation-layout">
+                    <div class="card selection-panel">
+                        <label for="evaluationAssignment">Opdracht</label>
+                        <select id="evaluationAssignment">
+                            <option value="">Kies een opdracht...</option>
+                        </select>
+
+                        <label for="evaluationClass">Klas</label>
+                        <select id="evaluationClass">
+                            <option value="">Kies een klas...</option>
+                        </select>
+
+                        <div class="student-filter-row">
+                            <input type="text" id="studentSearch" placeholder="Zoek leerling..." />
+                            <button type="button" class="filter-button" id="filterUnevaluated" title="Toon enkel onbeoordeeld">Nog niet</button>
+                        </div>
+
+                        <div class="student-list" id="studentList">
+                            <div class="empty-state small">Kies een klas of zoek op naam.</div>
+                        </div>
+                    </div>
+
+                    <div class="card evaluation-main">
+                        <div class="evaluation-top">
+                            <div class="selected-student">
+                                <span class="section-label">LEERLING</span>
+                                <h2 id="selectedStudentName">Geen leerling geselecteerd</h2>
+                                <p id="evaluationMeta" class="muted">Kies een opdracht, klas en leerling.</p>
+                            </div>
+                            <div class="evaluation-actions">
+                                <div class="timer-box">
+                                    <span class="timer-label">TIMER</span>
+                                    <div id="timerDisplay">00:00</div>
+                                    <div class="timer-buttons">
+                                        <button type="button" id="timerToggle" title="Start / Pauze" style="font-size: 14px; padding: 0 6px;">▶</button>
+                                        <button type="button" id="timerReset" title="Reset" style="font-size: 14px; padding: 0 6px;">⟲</button>
+                                    </div>
+                                </div>
+                                <div class="score-box">
+                                    <span class="timer-label">TOTAAL</span>
+                                    <div id="totalScore">—</div>
+                                </div>
+                                <button type="button" class="secondary-button" id="retakeButton">Herkansing</button>
+                                <button type="button" class="primary-button" id="saveEvaluation">Opslaan</button>
+                            </div>
+                        </div>
+
+                        <div class="history-section">
+                            <button type="button" class="history-toggle" id="toggleHistory">Eerdere evaluaties & Historiek ▼</button>
+                            <div id="evaluationHistory" class="history-content hidden">
+                                <div class="empty-state small">Selecteer een leerling.</div>
+                            </div>
+                        </div>
+
+                        <div id="evaluationFormContainer">
+                            <div class="empty-state">
+                                <div class="empty-icon">✓</div>
+                                <h3>Start een evaluatie</h3>
+                                <p>Kies links een opdracht, klas en leerling om te beginnen met beoordelen.</p>
+                            </div>
+                        </div>
+
+                        <div class="bottom-actions">
+                            <button type="button" class="secondary-button" id="exportStudent">Exporteer leerling (PDF)</button>
+                            <button type="button" class="secondary-button" id="exportClass">Exporteer hele klas (PDF)</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- OPDRACHTEN PAGINA -->
+            <section id="assignmentsPage" class="page">
+                <div class="page-header">
+                    <div>
+                        <span class="eyebrow">BEHEER</span>
+                        <h1>Opdrachten</h1>
+                        <p>Maak en beheer evaluatieroosters, criteria en snelcommentaren.</p>
+                    </div>
+                    <button type="button" class="primary-button" id="newAssignment">Nieuwe opdracht</button>
+                </div>
+
+                <div class="assignment-layout">
+                    <div class="card assignment-list" id="assignmentList">
+                        <div class="empty-state small">Nog geen opdrachten.</div>
+                    </div>
+
+                    <div class="card assignment-editor hidden" id="assignmentEditor">
+                        <div class="editor-header">
+                            <div>
+                                <span class="section-label">OPDRACHT BEWERKEN</span>
+                                <h2>Rooster instellingen</h2>
+                            </div>
+                            <div class="editor-header-actions">
+                                <button type="button" class="secondary-button" id="duplicateAssignment">Dupliceren</button>
+                                <button type="button" class="danger-button" id="deleteAssignment">Verwijderen</button>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="field full">
+                                <label for="assignmentTitle">Titel van de opdracht</label>
+                                <input type="text" id="assignmentTitle" placeholder="Bijv. Spreekbeurt, Presentatie..." />
+                            </div>
+                        </div>
+
+                        <div class="builder-section">
+                            <div class="builder-heading">
+                                <div>
+                                    <h3>Snelle opmerkingen</h3>
+                                    <p class="builder-description">Standaardfeedback knoppen die je kunt aanklikken tijdens het evalueren.</p>
+                                </div>
+                                <button type="button" class="small-primary" id="addComment">+ Commentaar</button>
+                            </div>
+                            <div id="commentsBuilder"></div>
+                        </div>
+
+                        <div class="builder-section">
+                            <div class="builder-heading">
+                                <div>
+                                    <h3>Criteria & Niveaus</h3>
+                                    <p class="builder-description">Stel de beoordelingscriteria en bijhorende scores in.</p>
+                                </div>
+                                <button type="button" class="small-primary" id="addParameter">+ Criterium</button>
+                            </div>
+                            <div id="parametersBuilder"></div>
+                        </div>
+
+                        <div class="editor-footer">
+                            <button type="button" class="primary-button" id="saveAssignment">Opdracht opslaan</button>
+                        </div>
+                    </div>
+
+                    <div class="card empty-state" id="assignmentEditorEmpty">
+                        <h3>Geen opdracht geselecteerd</h3>
+                        <p>Selecteer een opdracht in de lijst of maak een nieuwe aan.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- KLASSEN & LEERLINGEN PAGINA -->
+            <section id="studentsPage" class="page">
+                <div class="page-header">
+                    <div>
+                        <span class="eyebrow">ADMINISTRATIE</span>
+                        <h1>Klassen & Leerlingen</h1>
+                        <p>Beheer klassen, voeg leerlingen toe en raadpleeg overzichten.</p>
+                    </div>
+                    <button type="button" class="primary-button" id="newClass">Nieuwe klas</button>
+                </div>
+
+                <div class="students-layout">
+                    <div class="card class-list" id="classList">
+                        <div class="empty-state small">Nog geen klassen.</div>
+                    </div>
+
+                    <div class="card class-editor">
+                        <div id="classEmpty" class="empty-state">
+                            <h3>Geen klas geselecteerd</h3>
+                            <p>Kies links een klas om leerlingen en overzichten te bekijken.</p>
+                        </div>
+
+                        <div id="classContent" class="hidden">
+                            <div class="editor-header">
+                                <div>
+                                    <span class="section-label">KLASOVERZICHT</span>
+                                    <h2 id="classTitle">—</h2>
+                                    <p class="muted"><span id="classStudentCount">0</span> leerlingen in deze klas</p>
+                                </div>
+                                <div class="editor-header-actions">
+                                    <button type="button" class="secondary-button" id="editClass">Naam wijzigen</button>
+                                    <button type="button" class="danger-button" id="deleteClass">Klas verwijderen</button>
+                                </div>
+                            </div>
+
+                            <div class="student-add">
+                                <input type="text" id="newStudentName" placeholder="Voornaam + achternaam leerling..." />
+                                <button type="button" class="primary-button" id="addStudent">Toevoegen</button>
+                            </div>
+
+                            <div class="class-tabs">
+                                <button class="class-tab active" data-tab-target="tabStudents">Leerlingen</button>
+                                <button class="class-tab" data-tab-target="tabScores">Scores Overzicht</button>
+                            </div>
+
+                            <div id="tabStudents" class="class-tab-content">
+                                <div id="studentsTable"></div>
+                            </div>
+
+                            <div id="tabScores" class="class-tab-content hidden">
+                                <div id="classScoresContainer"></div>
+                            </div>
+                        </div>
+
+                        <div class="card hidden" id="studentDetail" style="margin-top: 30px; border: 1px solid var(--border); box-shadow: none;">
+                            <div class="editor-header" style="padding-bottom: 15px;">
+                                <div>
+                                    <span class="section-label">LEERLING DETAIL</span>
+                                    <h3 id="studentDetailName" style="margin: 5px 0 0; font-size: 20px;">—</h3>
+                                </div>
+                                <button type="button" class="secondary-button" id="closeStudentDetail">Sluiten</button>
+                            </div>
+                            <div class="student-class-change">
+                                <label>Verplaats naar andere klas:
+                                    <select id="studentClassChange"></select>
+                                </label>
+                                <button type="button" class="secondary-button" id="saveStudentClass">Verplaats</button>
+                            </div>
+                            <h4 style="margin: 20px 0 10px; font-size: 14px;">Evaluatiehistoriek leerling</h4>
+                            <div id="studentEvaluationHistory"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- TOAST NOTIFICATIE -->
+        <div class="toast" id="toast">
+            <span id="toastMessage">Actie voltooid</span>
+        </div>
+
         <script>
-            // these variables will be filled when generating the file - the template format is 'variable_name'
-            const staticryptInitiator = 
-            ((function(){
-  const exports = {};
-  const cryptoEngine = ((function(){
-  const exports = {};
-  const { subtle } = crypto;
+            const staticryptInitiator =[cite: 3] ((function(){
+                const exports = {};
+                const cryptoEngine = ((function(){
+                    const exports = {};
+                    const { subtle } = crypto;
+                    const IV_BITS = 16 * 8;
+                    const HEX_BITS = 4;
+                    const ENCRYPTION_ALGO = "AES-CBC";
+
+                    const HexEncoder = {
+                        parse: function (hexString) {
+                            if (hexString.length % 2 !== 0) throw "Invalid hexString";
+                            const arrayBuffer = new Uint8Array(hexString.length / 2);
+                            for (let i = 0; i < hexString.length; i += 2) {
+                                const byteValue = parseInt(hexString.substring(i, i + 2), 16);
+                                if (isNaN(byteValue)) throw "Invalid hexString";
+                                arrayBuffer[i / 2] = byteValue;
+                            }
+                            return arrayBuffer;
+                        },
+                        stringify: function (bytes) {
+                            const hexBytes = [];
+                            for (let i = 0; i < bytes.length; ++i) {
+                                let byteString = bytes[i].toString(16);
+                                if (byteString.length < 2) byteString = "0" + byteString;
+                                hexBytes.push(byteString);
+                            }
+                            return hexBytes.join("");
+                        }
+                    };
+
+                    const UTF8Encoder = {
+                        parse: function (str) { return new TextEncoder().encode(str); },
+                        stringify: function (bytes) { return new TextDecoder().decode(bytes); }
+                    };
+
+                    async function encrypt(msg, hashedPassword) {
+                        const iv = crypto.getRandomValues(new Uint8Array(IV_BITS / 8));
+                        const key = await subtle.importKey("raw", HexEncoder.parse(hashedPassword), ENCRYPTION_ALGO, false, ["encrypt"]);
+                        const encrypted = await subtle.encrypt({ name: ENCRYPTION_ALGO, iv: iv }, key, UTF8Encoder.parse(msg));
+                        return HexEncoder.stringify(iv) + HexEncoder.stringify(new Uint8Array(encrypted));
+                    }
+                    exports.encrypt = encrypt;
+
+                    async function decrypt(encryptedMsg, hashedPassword) {
+                        const ivLength = IV_BITS / HEX_BITS;
+                        const iv = HexEncoder.parse(encryptedMsg.substring(0, ivLength));
+                        const encrypted = encryptedMsg.substring(ivLength);
+                        const key = await subtle.importKey("raw", HexEncoder.parse(hashedPassword), ENCRYPTION_ALGO, false, ["decrypt"]);
+                        const outBuffer = await subtle.decrypt({ name: ENCRYPTION_ALGO, iv: iv }, key, HexEncoder.parse(encrypted));
+                        return UTF8Encoder.stringify(new Uint8Array(outBuffer));
+                    }
+                    exports.decrypt = decrypt;
+
+                    async function hashPassword(password, salt) {
+                        let hashedPassword = await hashLegacyRound(password, salt);
+                        hashedPassword = await hashSecondRound(hashedPassword, salt);
+                        return hashThirdRound(hashedPassword, salt);
+                    }
+                    exports.hashPassword = hashPassword;
+
+                    function hashLegacyRound(password, salt) { return pbkdf2(password, salt, 1000, "SHA-1"); }
+                    exports.hashLegacyRound = hashLegacyRound;
+
+                    function hashSecondRound(hashedPassword, salt) { return pbkdf2(hashedPassword, salt, 14000, "SHA-256"); }
+                    exports.hashSecondRound = hashSecondRound;
+
+                    function hashThirdRound(hashedPassword, salt) { return pbkdf2(hashedPassword, salt, 585000, "SHA-256"); }
+                    exports.hashThirdRound = hashThirdRound;
+
+                    async function pbkdf2(password, salt, iterations, hashAlgorithm) {
+                        const key = await subtle.importKey("raw", UTF8Encoder.parse(password), "PBKDF2", false, ["deriveBits"]);
+                        const keyBytes = await subtle.deriveBits({ name: "PBKDF2", hash: hashAlgorithm, iterations, salt: UTF8Encoder.parse(salt) }, key, 256);
+                        return HexEncoder.stringify(new Uint8Array(keyBytes));
+                    }
+
+                    function generateRandomSalt() {
+                        const bytes = crypto.getRandomValues(new Uint8Array(128 / 8));
+                        return HexEncoder.stringify(new Uint8Array(bytes));
+                    }
+                    exports.generateRandomSalt = generateRandomSalt;
+
+                    async function signMessage(hashedPassword, message) {
+                        const key = await subtle.importKey("raw", HexEncoder.parse(hashedPassword), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+                        const signature = await subtle.sign("HMAC", key, UTF8Encoder.parse(message));
+                        return HexEncoder.stringify(new Uint8Array(signature));
+                    }
+                    exports.signMessage = signMessage;
+
+                    function getRandomAlphanum() {
+                        const possibleCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                        let byteArray, parsedInt;
+                        do {
+                            byteArray = crypto.getRandomValues(new Uint8Array(1));
+                            parsedInt = byteArray[0] & 0xff;
+                        } while (parsedInt >= 256 - (256 % possibleCharacters.length));
+                        return possibleCharacters[parsedInt % possibleCharacters.length];
+                    }
+
+                    function generateRandomString(length) {
+                        let randomString = "";
+                        for (let i = 0; i < length; i++) randomString += getRandomAlphanum();
+                        return randomString;
+                    }
+                    exports.generateRandomString = generateRandomString;
+
+                    return exports;
+                })());
+
+                const codec = ((function(){
+                    const exports = {};
+                    function init(cryptoEngine) {
+                        const exports = {};
+                        async function encode(msg, password, salt) {
+                            const hashedPassword = await cryptoEngine.hashPassword(password, salt);
+                            const encrypted = await cryptoEngine.encrypt(msg, hashedPassword);
+                            const hmac = await cryptoEngine.signMessage(hashedPassword, encrypted);
+                            return hmac + encrypted;
+                        }
+                        exports.encode = encode;
+                        
+                        async function encodeWithHashedPassword(msg, hashedPassword) {
+                            const encrypted = await cryptoEngine.encrypt(msg, hashedPassword);
+                            const hmac = await cryptoEngine.signMessage(hashedPassword, encrypted);
+                            return hmac + encrypted;
+                        }
+                        exports.encodeWithHashedPassword = encodeWithHashedPassword;
+
+                        async function decode(signedMsg, hashedPassword, salt, backwardCompatibleAttempt = 0, originalPassword = "") {
+                            const encryptedHMAC = signedMsg.substring(0, 64);
+                            const encryptedMsg = signedMsg.substring(64);
+                            const decryptedHMAC = await cryptoEngine.signMessage(hashedPassword, encryptedMsg);
+
+                            if (decryptedHMAC !== encryptedHMAC) {
+                                originalPassword = originalPassword || hashedPassword;
+                                if (backwardCompatibleAttempt === 0) {
+                                    const updatedHashedPassword = await cryptoEngine.hashThirdRound(originalPassword, salt);
+                                    return decode(signedMsg, updatedHashedPassword, salt, backwardCompatibleAttempt + 1, originalPassword);
+                                }
+                                if (backwardCompatibleAttempt === 1) {
+                                    let updatedHashedPassword = await cryptoEngine.hashSecondRound(originalPassword, salt);
+                                    updatedHashedPassword = await cryptoEngine.hashThirdRound(updatedHashedPassword, salt);
+                                    return decode(signedMsg, updatedHashedPassword, salt, backwardCompatibleAttempt + 1, originalPassword);
+                                }
+                                return { success: false, message: "Signature mismatch" };
+                            }
+                            return { success: true, decoded: await cryptoEngine.decrypt(encryptedMsg, hashedPassword) };
+                        }
+                        exports.decode = decode;
+                        return exports;
+                    }
+                    exports.init = init;
+                    return exports;
+                })());
+
+                const decode = codec.init(cryptoEngine).decode;
+
+                function init(staticryptConfig, templateConfig) {
+                    const exports = {};
+                    async function decryptAndReplaceHtml(hashedPassword) {
+                        const { staticryptEncryptedMsgUniqueVariableName, staticryptSaltUniqueVariableName } = staticryptConfig;
+                        const { replaceHtmlCallback } = templateConfig;
+                        const result = await decode(staticryptEncryptedMsgUniqueVariableName, hashedPassword, staticryptSaltUniqueVariableName);
+                        if (!result.success) return false;
+                        const plainHTML = result.decoded;
+                        if (typeof replaceHtmlCallback === "function") {
+                            replaceHtmlCallback(plainHTML);
+                        } else {
+                            document.write(plainHTML);
+                            document.close();
+                        }
+                        return true;
+                    }
+
+                    async function handleDecryptionOfPage(password, isRememberChecked) {
+                        const { staticryptSaltUniqueVariableName } = staticryptConfig;
+                        const hashedPassword = await cryptoEngine.hashPassword(password, staticryptSaltUniqueVariableName);
+                        return handleDecryptionOfPageFromHash(hashedPassword, isRememberChecked);
+                    }
+                    exports.handleDecryptionOfPage = handleDecryptionOfPage;
+
+                    async function handleDecryptionOfPageFromHash(hashedPassword, isRememberChecked) {
+                        const { isRememberEnabled, rememberDurationInDays } = staticryptConfig;
+                        const { rememberExpirationKey, rememberPassphraseKey } = templateConfig;
+                        const isDecryptionSuccessful = await decryptAndReplaceHtml(hashedPassword);
+                        if (!isDecryptionSuccessful) return { isSuccessful: false, hashedPassword };
+                        if (isRememberEnabled && isRememberChecked) {
+                            window.localStorage.setItem(rememberPassphraseKey, hashedPassword);
+                            if (rememberDurationInDays > 0) {
+                                window.localStorage.setItem(rememberExpirationKey, (new Date().getTime() + rememberDurationInDays * 24 * 60 * 60 * 1000).toString());
+                            }
+                        }
+                        return { isSuccessful: true, hashedPassword };
+                    }
+                    exports.handleDecryptionOfPageFromHash = handleDecryptionOfPageFromHash;
+
+                    function clearLocalStorage() {
+                        const { clearLocalStorageCallback, rememberExpirationKey, rememberPassphraseKey } = templateConfig;
+                        if (typeof clearLocalStorageCallback === "function") {
+                            clearLocalStorageCallback();
+                        } else {
+                            localStorage.removeItem(rememberPassphraseKey);
+                            localStorage.removeItem(rememberExpirationKey);
+                        }
+                    }
+
+                    async function handleDecryptOnLoad() {
+                        let isSuccessful = await decryptOnLoadFromUrl();
+                        if (!isSuccessful) isSuccessful = await decryptOnLoadFromRememberMe();
+                        return { isSuccessful };
+                    }
+                    exports.handleDecryptOnLoad = handleDecryptOnLoad;
+
+                    function logoutIfNeeded() {
+                        const logoutKey = "staticrypt_logout";
+                        const queryParams = new URLSearchParams(window.location.search);
+                        if (queryParams.has(logoutKey)) { clearLocalStorage(); return true; }
+                        const hash = window.location.hash.substring(1);
+                        if (hash.includes(logoutKey)) { clearLocalStorage(); return true; }
+                        return false;
+                    }
+
+                    async function decryptOnLoadFromRememberMe() {
+                        const { rememberDurationInDays } = staticryptConfig;
+                        const { rememberExpirationKey, rememberPassphraseKey } = templateConfig;
+                        if (logoutIfNeeded()) return false;
+                        if (rememberDurationInDays && rememberDurationInDays > 0) {
+                            const expiration = localStorage.getItem(rememberExpirationKey),
+                                isExpired = expiration && new Date().getTime() > parseInt(expiration);
+                            if (isExpired) { clearLocalStorage(); return false; }
+                        }
+                        const hashedPassword = localStorage.getItem(rememberPassphraseKey);
+                        if (hashedPassword) {
+                            const isDecryptionSuccessful = await decryptAndReplaceHtml(hashedPassword);
+                            if (!isDecryptionSuccessful) { clearLocalStorage(); return false; }
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    async function decryptOnLoadFromUrl() {
+                        const passwordKey = "staticrypt_pwd";
+                        const rememberMeKey = "remember_me";
+                        const queryParams = new URLSearchParams(window.location.search);
+                        const hashedPasswordQuery = queryParams.get(passwordKey);
+                        const rememberMeQuery = queryParams.get(rememberMeKey);
+                        const urlFragment = window.location.hash.substring(1);
+                        const hashedPasswordRegexMatch = urlFragment.match(new RegExp(passwordKey + "=([^&]*)"));
+                        const hashedPasswordFragment = hashedPasswordRegexMatch ? hashedPasswordRegexMatch[1] : null;
+                        const rememberMeFragment = urlFragment.includes(rememberMeKey);
+                        const hashedPassword = hashedPasswordFragment || hashedPasswordQuery;
+                        const rememberMe = rememberMeFragment || rememberMeQuery;
+                        if (hashedPassword) return handleDecryptionOfPageFromHash(hashedPassword, rememberMe);
+                        return false;
+                    }
+
+                    return exports;
+                }
+                exports.init = init;
+                return exports;
+            })());
 
-const IV_BITS = 16 * 8;
-const HEX_BITS = 4;
-const ENCRYPTION_ALGO = "AES-CBC";
-
-/**
- * Translates between utf8 encoded hexadecimal strings
- * and Uint8Array bytes.
- */
-const HexEncoder = {
-    /**
-     * hex string -> bytes
-     * @param {string} hexString
-     * @returns {Uint8Array}
-     */
-    parse: function (hexString) {
-        if (hexString.length % 2 !== 0) throw "Invalid hexString";
-        const arrayBuffer = new Uint8Array(hexString.length / 2);
-
-        for (let i = 0; i < hexString.length; i += 2) {
-            const byteValue = parseInt(hexString.substring(i, i + 2), 16);
-            if (isNaN(byteValue)) {
-                throw "Invalid hexString";
-            }
-            arrayBuffer[i / 2] = byteValue;
-        }
-        return arrayBuffer;
-    },
-
-    /**
-     * bytes -> hex string
-     * @param {Uint8Array} bytes
-     * @returns {string}
-     */
-    stringify: function (bytes) {
-        const hexBytes = [];
-
-        for (let i = 0; i < bytes.length; ++i) {
-            let byteString = bytes[i].toString(16);
-            if (byteString.length < 2) {
-                byteString = "0" + byteString;
-            }
-            hexBytes.push(byteString);
-        }
-        return hexBytes.join("");
-    },
-};
-
-/**
- * Translates between utf8 strings and Uint8Array bytes.
- */
-const UTF8Encoder = {
-    parse: function (str) {
-        return new TextEncoder().encode(str);
-    },
-
-    stringify: function (bytes) {
-        return new TextDecoder().decode(bytes);
-    },
-};
-
-/**
- * Salt and encrypt a msg with a password.
- */
-async function encrypt(msg, hashedPassword) {
-    // Must be 16 bytes, unpredictable, and preferably cryptographically random. However, it need not be secret.
-    // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/encrypt#parameters
-    const iv = crypto.getRandomValues(new Uint8Array(IV_BITS / 8));
-
-    const key = await subtle.importKey("raw", HexEncoder.parse(hashedPassword), ENCRYPTION_ALGO, false, ["encrypt"]);
-
-    const encrypted = await subtle.encrypt(
-        {
-            name: ENCRYPTION_ALGO,
-            iv: iv,
-        },
-        key,
-        UTF8Encoder.parse(msg)
-    );
-
-    // iv will be 32 hex characters, we prepend it to the ciphertext for use in decryption
-    return HexEncoder.stringify(iv) + HexEncoder.stringify(new Uint8Array(encrypted));
-}
-exports.encrypt = encrypt;
-
-/**
- * Decrypt a salted msg using a password.
- *
- * @param {string} encryptedMsg
- * @param {string} hashedPassword
- * @returns {Promise<string>}
- */
-async function decrypt(encryptedMsg, hashedPassword) {
-    const ivLength = IV_BITS / HEX_BITS;
-    const iv = HexEncoder.parse(encryptedMsg.substring(0, ivLength));
-    const encrypted = encryptedMsg.substring(ivLength);
-
-    const key = await subtle.importKey("raw", HexEncoder.parse(hashedPassword), ENCRYPTION_ALGO, false, ["decrypt"]);
-
-    const outBuffer = await subtle.decrypt(
-        {
-            name: ENCRYPTION_ALGO,
-            iv: iv,
-        },
-        key,
-        HexEncoder.parse(encrypted)
-    );
-
-    return UTF8Encoder.stringify(new Uint8Array(outBuffer));
-}
-exports.decrypt = decrypt;
-
-/**
- * Salt and hash the password so it can be stored in localStorage without opening a password reuse vulnerability.
- *
- * @param {string} password
- * @param {string} salt
- * @returns {Promise<string>}
- */
-async function hashPassword(password, salt) {
-    // we hash the password in multiple steps, each adding more iterations. This is because we used to allow less
-    // iterations, so for backward compatibility reasons, we need to support going from that to more iterations.
-    let hashedPassword = await hashLegacyRound(password, salt);
-
-    hashedPassword = await hashSecondRound(hashedPassword, salt);
-
-    return hashThirdRound(hashedPassword, salt);
-}
-exports.hashPassword = hashPassword;
-
-/**
- * This hashes the password with 1k iterations. This is a low number, we need this function to support backwards
- * compatibility.
- *
- * @param {string} password
- * @param {string} salt
- * @returns {Promise<string>}
- */
-function hashLegacyRound(password, salt) {
-    return pbkdf2(password, salt, 1000, "SHA-1");
-}
-exports.hashLegacyRound = hashLegacyRound;
-
-/**
- * Add a second round of iterations. This is because we used to use 1k, so for backwards compatibility with
- * remember-me/autodecrypt links, we need to support going from that to more iterations.
- *
- * @param hashedPassword
- * @param salt
- * @returns {Promise<string>}
- */
-function hashSecondRound(hashedPassword, salt) {
-    return pbkdf2(hashedPassword, salt, 14000, "SHA-256");
-}
-exports.hashSecondRound = hashSecondRound;
-
-/**
- * Add a third round of iterations to bring total number to 600k. This is because we used to use 1k, then 15k, so for
- * backwards compatibility with remember-me/autodecrypt links, we need to support going from that to more iterations.
- *
- * @param hashedPassword
- * @param salt
- * @returns {Promise<string>}
- */
-function hashThirdRound(hashedPassword, salt) {
-    return pbkdf2(hashedPassword, salt, 585000, "SHA-256");
-}
-exports.hashThirdRound = hashThirdRound;
-
-/**
- * Salt and hash the password so it can be stored in localStorage without opening a password reuse vulnerability.
- *
- * @param {string} password
- * @param {string} salt
- * @param {int} iterations
- * @param {string} hashAlgorithm
- * @returns {Promise<string>}
- */
-async function pbkdf2(password, salt, iterations, hashAlgorithm) {
-    const key = await subtle.importKey("raw", UTF8Encoder.parse(password), "PBKDF2", false, ["deriveBits"]);
-
-    const keyBytes = await subtle.deriveBits(
-        {
-            name: "PBKDF2",
-            hash: hashAlgorithm,
-            iterations,
-            salt: UTF8Encoder.parse(salt),
-        },
-        key,
-        256
-    );
-
-    return HexEncoder.stringify(new Uint8Array(keyBytes));
-}
-
-function generateRandomSalt() {
-    const bytes = crypto.getRandomValues(new Uint8Array(128 / 8));
-
-    return HexEncoder.stringify(new Uint8Array(bytes));
-}
-exports.generateRandomSalt = generateRandomSalt;
-
-async function signMessage(hashedPassword, message) {
-    const key = await subtle.importKey(
-        "raw",
-        HexEncoder.parse(hashedPassword),
-        {
-            name: "HMAC",
-            hash: "SHA-256",
-        },
-        false,
-        ["sign"]
-    );
-    const signature = await subtle.sign("HMAC", key, UTF8Encoder.parse(message));
-
-    return HexEncoder.stringify(new Uint8Array(signature));
-}
-exports.signMessage = signMessage;
-
-function getRandomAlphanum() {
-    const possibleCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
-    let byteArray;
-    let parsedInt;
-
-    // Keep generating new random bytes until we get a value that falls
-    // within a range that can be evenly divided by possibleCharacters.length
-    do {
-        byteArray = crypto.getRandomValues(new Uint8Array(1));
-        // extract the lowest byte to get an int from 0 to 255 (probably unnecessary, since we're only generating 1 byte)
-        parsedInt = byteArray[0] & 0xff;
-    } while (parsedInt >= 256 - (256 % possibleCharacters.length));
-
-    // Take the modulo of the parsed integer to get a random number between 0 and totalLength - 1
-    const randomIndex = parsedInt % possibleCharacters.length;
-
-    return possibleCharacters[randomIndex];
-}
-
-/**
- * Generate a random string of a given length.
- *
- * @param {int} length
- * @returns {string}
- */
-function generateRandomString(length) {
-    let randomString = "";
-
-    for (let i = 0; i < length; i++) {
-        randomString += getRandomAlphanum();
-    }
-
-    return randomString;
-}
-exports.generateRandomString = generateRandomString;
-
-  return exports;
-})());
-const codec = ((function(){
-  const exports = {};
-  /**
- * Initialize the codec with the provided cryptoEngine - this return functions to encode and decode messages.
- *
- * @param cryptoEngine - the engine to use for encryption / decryption
- */
-function init(cryptoEngine) {
-    const exports = {};
-
-    /**
-     * Top-level function for encoding a message.
-     * Includes password hashing, encryption, and signing.
-     *
-     * @param {string} msg
-     * @param {string} password
-     * @param {string} salt
-     *
-     * @returns {string} The encoded text
-     */
-    async function encode(msg, password, salt) {
-        const hashedPassword = await cryptoEngine.hashPassword(password, salt);
-
-        const encrypted = await cryptoEngine.encrypt(msg, hashedPassword);
-
-        // we use the hashed password in the HMAC because this is effectively what will be used a password (so we can store
-        // it in localStorage safely, we don't use the clear text password)
-        const hmac = await cryptoEngine.signMessage(hashedPassword, encrypted);
-
-        return hmac + encrypted;
-    }
-    exports.encode = encode;
-
-    /**
-     * Encode using a password that has already been hashed. This is useful to encode multiple messages in a row, that way
-     * we don't need to hash the password multiple times.
-     *
-     * @param {string} msg
-     * @param {string} hashedPassword
-     *
-     * @returns {string} The encoded text
-     */
-    async function encodeWithHashedPassword(msg, hashedPassword) {
-        const encrypted = await cryptoEngine.encrypt(msg, hashedPassword);
-
-        // we use the hashed password in the HMAC because this is effectively what will be used a password (so we can store
-        // it in localStorage safely, we don't use the clear text password)
-        const hmac = await cryptoEngine.signMessage(hashedPassword, encrypted);
-
-        return hmac + encrypted;
-    }
-    exports.encodeWithHashedPassword = encodeWithHashedPassword;
-
-    /**
-     * Top-level function for decoding a message.
-     * Includes signature check and decryption.
-     *
-     * @param {string} signedMsg
-     * @param {string} hashedPassword
-     * @param {string} salt
-     * @param {int} backwardCompatibleAttempt
-     * @param {string} originalPassword
-     *
-     * @returns {Object} {success: true, decoded: string} | {success: false, message: string}
-     */
-    async function decode(signedMsg, hashedPassword, salt, backwardCompatibleAttempt = 0, originalPassword = "") {
-        const encryptedHMAC = signedMsg.substring(0, 64);
-        const encryptedMsg = signedMsg.substring(64);
-        const decryptedHMAC = await cryptoEngine.signMessage(hashedPassword, encryptedMsg);
-
-        if (decryptedHMAC !== encryptedHMAC) {
-            // we have been raising the number of iterations in the hashing algorithm multiple times, so to support the old
-            // remember-me/autodecrypt links we need to try bringing the old hashes up to speed.
-            originalPassword = originalPassword || hashedPassword;
-            if (backwardCompatibleAttempt === 0) {
-                const updatedHashedPassword = await cryptoEngine.hashThirdRound(originalPassword, salt);
-
-                return decode(signedMsg, updatedHashedPassword, salt, backwardCompatibleAttempt + 1, originalPassword);
-            }
-            if (backwardCompatibleAttempt === 1) {
-                let updatedHashedPassword = await cryptoEngine.hashSecondRound(originalPassword, salt);
-                updatedHashedPassword = await cryptoEngine.hashThirdRound(updatedHashedPassword, salt);
-
-                return decode(signedMsg, updatedHashedPassword, salt, backwardCompatibleAttempt + 1, originalPassword);
-            }
-
-            return { success: false, message: "Signature mismatch" };
-        }
-
-        return {
-            success: true,
-            decoded: await cryptoEngine.decrypt(encryptedMsg, hashedPassword),
-        };
-    }
-    exports.decode = decode;
-
-    return exports;
-}
-exports.init = init;
-
-  return exports;
-})());
-const decode = codec.init(cryptoEngine).decode;
-
-/**
- * Initialize the staticrypt module, that exposes functions callbable by the password_template.
- *
- * @param {{
- *  staticryptEncryptedMsgUniqueVariableName: string,
- *  isRememberEnabled: boolean,
- *  rememberDurationInDays: number,
- *  staticryptSaltUniqueVariableName: string,
- * }} staticryptConfig - object of data that is stored on the password_template at encryption time.
- *
- * @param {{
- *  rememberExpirationKey: string,
- *  rememberPassphraseKey: string,
- *  replaceHtmlCallback: function,
- *  clearLocalStorageCallback: function,
- * }} templateConfig - object of data that can be configured by a custom password_template.
- */
-function init(staticryptConfig, templateConfig) {
-    const exports = {};
-
-    /**
-     * Decrypt our encrypted page, replace the whole HTML.
-     *
-     * @param {string} hashedPassword
-     * @returns {Promise<boolean>}
-     */
-    async function decryptAndReplaceHtml(hashedPassword) {
-        const { staticryptEncryptedMsgUniqueVariableName, staticryptSaltUniqueVariableName } = staticryptConfig;
-        const { replaceHtmlCallback } = templateConfig;
-
-        const result = await decode(
-            staticryptEncryptedMsgUniqueVariableName,
-            hashedPassword,
-            staticryptSaltUniqueVariableName
-        );
-        if (!result.success) {
-            return false;
-        }
-        const plainHTML = result.decoded;
-
-        // if the user configured a callback call it, otherwise just replace the whole HTML
-        if (typeof replaceHtmlCallback === "function") {
-            replaceHtmlCallback(plainHTML);
-        } else {
-            document.write(plainHTML);
-            document.close();
-        }
-
-        return true;
-    }
-
-    /**
-     * Attempt to decrypt the page and replace the whole HTML.
-     *
-     * @param {string} password
-     * @param {boolean} isRememberChecked
-     *
-     * @returns {Promise<{isSuccessful: boolean, hashedPassword?: string}>} - we return an object, so that if we want to
-     *   expose more information in the future we can do it without breaking the password_template
-     */
-    async function handleDecryptionOfPage(password, isRememberChecked) {
-        const { staticryptSaltUniqueVariableName } = staticryptConfig;
-
-        // decrypt and replace the whole page
-        const hashedPassword = await cryptoEngine.hashPassword(password, staticryptSaltUniqueVariableName);
-        return handleDecryptionOfPageFromHash(hashedPassword, isRememberChecked);
-    }
-    exports.handleDecryptionOfPage = handleDecryptionOfPage;
-
-    async function handleDecryptionOfPageFromHash(hashedPassword, isRememberChecked) {
-        const { isRememberEnabled, rememberDurationInDays } = staticryptConfig;
-        const { rememberExpirationKey, rememberPassphraseKey } = templateConfig;
-
-        const isDecryptionSuccessful = await decryptAndReplaceHtml(hashedPassword);
-
-        if (!isDecryptionSuccessful) {
-            return {
-                isSuccessful: false,
-                hashedPassword,
-            };
-        }
-
-        // remember the hashedPassword and set its expiration if necessary
-        if (isRememberEnabled && isRememberChecked) {
-            window.localStorage.setItem(rememberPassphraseKey, hashedPassword);
-
-            // set the expiration if the duration isn't 0 (meaning no expiration)
-            if (rememberDurationInDays > 0) {
-                window.localStorage.setItem(
-                    rememberExpirationKey,
-                    (new Date().getTime() + rememberDurationInDays * 24 * 60 * 60 * 1000).toString()
-                );
-            }
-        }
-
-        return {
-            isSuccessful: true,
-            hashedPassword,
-        };
-    }
-    exports.handleDecryptionOfPageFromHash = handleDecryptionOfPageFromHash;
-
-    /**
-     * Clear localstorage from staticrypt related values
-     */
-    function clearLocalStorage() {
-        const { clearLocalStorageCallback, rememberExpirationKey, rememberPassphraseKey } = templateConfig;
-
-        if (typeof clearLocalStorageCallback === "function") {
-            clearLocalStorageCallback();
-        } else {
-            localStorage.removeItem(rememberPassphraseKey);
-            localStorage.removeItem(rememberExpirationKey);
-        }
-    }
-
-    async function handleDecryptOnLoad() {
-        let isSuccessful = await decryptOnLoadFromUrl();
-
-        if (!isSuccessful) {
-            isSuccessful = await decryptOnLoadFromRememberMe();
-        }
-
-        return { isSuccessful };
-    }
-    exports.handleDecryptOnLoad = handleDecryptOnLoad;
-
-    /**
-     * Clear storage if we are logging out
-     *
-     * @returns {boolean} - whether we logged out
-     */
-    function logoutIfNeeded() {
-        const logoutKey = "staticrypt_logout";
-
-        // handle logout through query param
-        const queryParams = new URLSearchParams(window.location.search);
-        if (queryParams.has(logoutKey)) {
-            clearLocalStorage();
-            return true;
-        }
-
-        // handle logout through URL fragment
-        const hash = window.location.hash.substring(1);
-        if (hash.includes(logoutKey)) {
-            clearLocalStorage();
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * To be called on load: check if we want to try to decrypt and replace the HTML with the decrypted content, and
-     * try to do it if needed.
-     *
-     * @returns {Promise<boolean>} true if we derypted and replaced the whole page, false otherwise
-     */
-    async function decryptOnLoadFromRememberMe() {
-        const { rememberDurationInDays } = staticryptConfig;
-        const { rememberExpirationKey, rememberPassphraseKey } = templateConfig;
-
-        // if we are login out, terminate
-        if (logoutIfNeeded()) {
-            return false;
-        }
-
-        // if there is expiration configured, check if we're not beyond the expiration
-        if (rememberDurationInDays && rememberDurationInDays > 0) {
-            const expiration = localStorage.getItem(rememberExpirationKey),
-                isExpired = expiration && new Date().getTime() > parseInt(expiration);
-
-            if (isExpired) {
-                clearLocalStorage();
-                return false;
-            }
-        }
-
-        const hashedPassword = localStorage.getItem(rememberPassphraseKey);
-
-        if (hashedPassword) {
-            // try to decrypt
-            const isDecryptionSuccessful = await decryptAndReplaceHtml(hashedPassword);
-
-            // if the decryption is unsuccessful the password might be wrong - silently clear the saved data and let
-            // the user fill the password form again
-            if (!isDecryptionSuccessful) {
-                clearLocalStorage();
-                return false;
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
-    async function decryptOnLoadFromUrl() {
-        const passwordKey = "staticrypt_pwd";
-        const rememberMeKey = "remember_me";
-
-        // try to get the password from the query param (for backward compatibility - we now want to avoid this method,
-        // since it sends the hashed password to the server which isn't needed)
-        const queryParams = new URLSearchParams(window.location.search);
-        const hashedPasswordQuery = queryParams.get(passwordKey);
-        const rememberMeQuery = queryParams.get(rememberMeKey);
-
-        const urlFragment = window.location.hash.substring(1);
-        // get the password from the url fragment
-        const hashedPasswordRegexMatch = urlFragment.match(new RegExp(passwordKey + "=([^&]*)"));
-        const hashedPasswordFragment = hashedPasswordRegexMatch ? hashedPasswordRegexMatch[1] : null;
-        const rememberMeFragment = urlFragment.includes(rememberMeKey);
-
-        const hashedPassword = hashedPasswordFragment || hashedPasswordQuery;
-        const rememberMe = rememberMeFragment || rememberMeQuery;
-
-        if (hashedPassword) {
-            return handleDecryptionOfPageFromHash(hashedPassword, rememberMe);
-        }
-
-        return false;
-    }
-
-    return exports;
-}
-exports.init = init;
-
-  return exports;
-})());
-        ;
             const templateError = "template_error",
                 templateToggleAltShow = "template_toggle_show",
                 templateToggleAltHide = "template_toggle_hide",

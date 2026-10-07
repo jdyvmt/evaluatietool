@@ -115,6 +115,7 @@ function setupEvaluationEvents() {
         selectedAssignmentId = e.target.value || null;
         currentEvaluationId = null;
         isRetake = false;
+        resetTimer();
         renderEvaluationStudents();
         renderEvaluationForm();
     });
@@ -122,6 +123,9 @@ function setupEvaluationEvents() {
     document.getElementById("evaluationClass")?.addEventListener("change", (e) => {
         selectedClassId = e.target.value || null;
         selectedStudentId = null;
+        currentEvaluationId = null;
+        isRetake = false;
+        resetTimer();
         renderEvaluationStudents();
         renderEvaluationForm();
     });
@@ -143,8 +147,7 @@ function setupEvaluationEvents() {
         document.getElementById("evaluationHistory")?.classList.toggle("hidden");
     });
 
-    document.getElementById("timerStart")?.addEventListener("click", startTimer);
-    document.getElementById("timerPause")?.addEventListener("click", pauseTimer);
+    document.getElementById("timerToggle")?.addEventListener("click", toggleTimer);
     document.getElementById("timerReset")?.addEventListener("click", resetTimer);
 }
 
@@ -249,6 +252,9 @@ function renderEvaluationForm() {
     let evaluation = currentEvaluationId ? state.evaluations.find(e => e.id === currentEvaluationId) : null;
     if (!evaluation && !isRetake) {
         evaluation = getLatestEvaluation(selectedStudentId, selectedAssignmentId);
+        if (evaluation) {
+            currentEvaluationId = evaluation.id;
+        }
     }
 
     renderForm(assignment, evaluation);
@@ -347,7 +353,6 @@ function renderForm(assignment, evaluation) {
                 levelsContainer.style.opacity = "0.4";
                 levelsContainer.style.pointerEvents = "none";
                 scoreLabel.textContent = "Niet meegeteld";
-                // Uncheck radio buttons in this parameter
                 levelsContainer.querySelectorAll("input[type=radio]").forEach(r => {
                     r.checked = false;
                     r.disabled = true;
@@ -385,10 +390,19 @@ function renderForm(assignment, evaluation) {
             button.classList.toggle("active");
             const textarea = document.getElementById("feedbackText");
             if (!textarea) return;
-            const selectedCommentsNow = Array.from(container.querySelectorAll(".comment-chip.active")).map(
-                item => assignment.comments[Number(item.dataset.commentIndex)]
-            );
-            textarea.value = selectedCommentsNow.join(" ");
+            
+            const commentText = assignment.comments[Number(button.dataset.commentIndex)];
+            const cursorPosition = textarea.selectionStart;
+            const currentText = textarea.value;
+            
+            if (button.classList.contains("active")) {
+                const textToInsert = (currentText && !currentText.endsWith(" ") && !currentText.endsWith("\n") ? " " : "") + commentText;
+                textarea.value = currentText.slice(0, cursorPosition) + textToInsert + currentText.slice(cursorPosition);
+                textarea.focus();
+                textarea.setSelectionRange(cursorPosition + textToInsert.length, cursorPosition + textToInsert.length);
+            } else {
+                // If chip is deselected, optionally remove it or keep user edits. Standard behavior: leave text as is or clean up.
+            }
         });
     });
 
@@ -489,25 +503,27 @@ async function saveEvaluation() {
 
     const data = collectFormData();
     const previous = getEvaluationHistory(selectedStudentId, selectedAssignmentId);
-    const nextAttempt = previous.length ? Math.max(...previous.map(item => item.attempt_number || 1)) + (isRetake ? 1 : 0) : 1;
+    const latestExisting = getLatestEvaluation(selectedStudentId, selectedAssignmentId);
+    const nextAttempt = previous.length ? Math.max(...previous.map(item => item.attempt_number || 1)) + 1 : 1;
 
     try {
-        if (currentEvaluationId && !isRetake) {
+        if (latestExisting && !isRetake) {
+            // Overwrite existing latest evaluation if it's not a new retake
             const updated = {
-                assignment_id: selectedAssignmentId,
-                student_id: selectedStudentId,
-                class_id: selectedClassId,
                 scores: data.scores,
                 excluded_parameters: data.excluded_parameters,
                 comments: data.comments,
                 feedback: data.feedback,
                 penalty_points: data.penalty_points,
+                timer_seconds: timerSeconds,
                 updated_at: new Date().toISOString()
             };
-            await dbUpdate("evaluations", currentEvaluationId, updated);
-            const index = state.evaluations.findIndex(item => item.id === currentEvaluationId);
+            await dbUpdate("evaluations", latestExisting.id, updated);
+            const index = state.evaluations.findIndex(item => item.id === latestExisting.id);
             if (index >= 0) state.evaluations[index] = { ...state.evaluations[index], ...updated };
+            currentEvaluationId = latestExisting.id;
         } else {
+            // Save as new record (either first attempt or explicit retake)
             const newEvaluation = {
                 id: createId("evaluation_"),
                 assignment_id: selectedAssignmentId,
@@ -518,6 +534,7 @@ async function saveEvaluation() {
                 comments: data.comments,
                 feedback: data.feedback,
                 penalty_points: data.penalty_points,
+                timer_seconds: timerSeconds,
                 attempt_number: isRetake ? nextAttempt : 1,
                 evaluation_date: new Date().toISOString(),
                 created_at: new Date().toISOString()
@@ -588,17 +605,21 @@ function renderHistory() {
     container.innerHTML = history.map(evaluation => {
         const score = calculateEvaluationScore(evaluation, assignment);
         const date = formatDate(evaluation.evaluation_date || evaluation.created_at);
+        const feedbackPreview = evaluation.feedback ? `<div style="font-size: 11px; color: var(--muted); margin-top: 4px; white-space: pre-wrap;">${escapeHtml(evaluation.feedback)}</div>` : "";
         return `
-            <div class="history-item">
-                <div class="history-date">
-                    <strong>${date}</strong>
-                    <div class="history-attempt">${evaluation.attempt_number > 1 ? "Herkansing" : "Eerste evaluatie"} ${evaluation.penalty_points ? `(Strafpunten: -${evaluation.penalty_points})` : ""}</div>
+            <div class="history-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="history-date">
+                        <strong>${date}</strong>
+                        <div class="history-attempt">${evaluation.attempt_number > 1 ? `Herkansing ${evaluation.attempt_number}` : "Eerste evaluatie"} ${evaluation.penalty_points ? `(Strafpunten: -${evaluation.penalty_points})` : ""}</div>
+                    </div>
+                    <div class="history-score">${score === null ? "—" : `${score.total} /${score.max}`}</div>
+                    <div class="history-actions">
+                        <button data-history-edit="${escapeHtml(evaluation.id)}">Bewerken</button>
+                        <button data-history-delete="${escapeHtml(evaluation.id)}">Verwijderen</button>
+                    </div>
                 </div>
-                <div class="history-score">${score === null ? "—" : `${score.total} / ${score.max}`}</div>
-                <div class="history-actions">
-                    <button data-history-edit="${escapeHtml(evaluation.id)}">Bewerken</button>
-                    <button data-history-delete="${escapeHtml(evaluation.id)}">Verwijderen</button>
-                </div>
+                ${feedbackPreview}
             </div>
         `;
     }).join("");
@@ -607,6 +628,11 @@ function renderHistory() {
         button.addEventListener("click", () => {
             currentEvaluationId = button.dataset.historyEdit;
             isRetake = false;
+            const evalObj = state.evaluations.find(e => e.id === currentEvaluationId);
+            if (evalObj && evalObj.timer_seconds !== undefined) {
+                timerSeconds = evalObj.timer_seconds;
+                updateTimerDisplay();
+            }
             renderEvaluationForm();
         });
     });
@@ -634,11 +660,29 @@ function updateTimerDisplay() {
     const minutes = Math.floor(timerSeconds / 60);
     const seconds = timerSeconds % 60;
     timer.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+    const assignment = state.assignments.find(a => a.id === selectedAssignmentId);
+    const targetLimit = (assignment?.time_limit_seconds || 0);
+    if (targetLimit > 0 && timerSeconds >= targetLimit) {
+        timer.style.color = "var(--success)";
+    } else {
+        timer.style.color = "";
+    }
+}
+
+function toggleTimer() {
+    if (timerRunning) {
+        pauseTimer();
+    } else {
+        startTimer();
+    }
 }
 
 function startTimer() {
     if (timerRunning) return;
     timerRunning = true;
+    const toggleBtn = document.getElementById("timerToggle");
+    if (toggleBtn) toggleBtn.textContent = "⏸";
     timerInterval = setInterval(() => {
         timerSeconds++;
         updateTimerDisplay();
@@ -648,6 +692,8 @@ function startTimer() {
 function pauseTimer() {
     timerRunning = false;
     clearInterval(timerInterval);
+    const toggleBtn = document.getElementById("timerToggle");
+    if (toggleBtn) toggleBtn.textContent = "▶";
 }
 
 function resetTimer() {
@@ -669,6 +715,8 @@ function createNewAssignment() {
     const assignment = {
         id: createId("assignment_"),
         title: "Nieuwe opdracht",
+        time_limit_minutes: 0,
+        time_limit_seconds: 0,
         order: state.assignments.length,
         comments: [],
         parameters: [
@@ -697,6 +745,29 @@ function openAssignmentEditor() {
     document.getElementById("assignmentEditor")?.classList.remove("hidden");
     document.getElementById("assignmentEditorEmpty")?.classList.add("hidden");
     document.getElementById("assignmentTitle").value = assignment.title || "";
+    
+    let timeLimitInput = document.getElementById("assignmentTimeLimit");
+    if (!timeLimitInput) {
+        // Add time limit input dynamically if it doesn't exist in HTML structure yet
+        const headerActions = document.querySelector(".editor-header-actions");
+        if (headerActions) {
+            const wrapper = document.createElement("div");
+            wrapper.style.display = "flex";
+            wrapper.style.alignItems = "center";
+            wrapper.style.gap = "5px";
+            wrapper.innerHTML = `<label style="margin:0; font-size:11px;">Tijdlimiet (min):</label><input type="number" id="assignmentTimeLimit" min="0" style="width: 70px; padding: 8px;">`;
+            headerActions.parentNode.insertBefore(wrapper, headerActions);
+            timeLimitInput = document.getElementById("assignmentTimeLimit");
+            timeLimitInput.addEventListener("input", (e) => {
+                assignment.time_limit_minutes = Number(e.target.value) || 0;
+                assignment.time_limit_seconds = assignment.time_limit_minutes * 60;
+            });
+        }
+    }
+    if (timeLimitInput) {
+        timeLimitInput.value = assignment.time_limit_minutes || (assignment.time_limit_seconds ? Math.floor(assignment.time_limit_seconds / 60) : 0);
+    }
+
     renderCommentsBuilder(assignment);
     renderParametersBuilder(assignment);
 }
@@ -849,6 +920,11 @@ async function saveAssignment() {
         return;
     }
     assignment.title = title;
+    const timeLimitInput = document.getElementById("assignmentTimeLimit");
+    if (timeLimitInput) {
+        assignment.time_limit_minutes = Number(timeLimitInput.value) || 0;
+        assignment.time_limit_seconds = assignment.time_limit_minutes * 60;
+    }
     assignment.parameters.forEach(p => p.levels.forEach(l => l.score = Number(l.score)));
 
     try {
@@ -1217,16 +1293,20 @@ function renderStudentEvaluationHistory() {
         const assignment = state.assignments.find(a => a.id === evaluation.assignment_id);
         const score = calculateEvaluationScore(evaluation, assignment);
         const date = formatDate(evaluation.evaluation_date || evaluation.created_at);
+        const feedbackText = evaluation.feedback ? `<div class="muted" style="font-size: 11px; margin-top: 4px;"><strong>Feedback:</strong> ${escapeHtml(evaluation.feedback)}</div>` : "";
         return `
-            <div class="history-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border);">
-                <div>
-                    <strong>${assignment ? escapeHtml(assignment.title) : "Onbekende opdracht"}</strong>
-                    <div class="muted" style="font-size: 10px;">Datum: ${date} ${evaluation.attempt_number > 1 ? `(Herkansing ${evaluation.attempt_number})` : ""}</div>
+            <div class="history-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>${assignment ? escapeHtml(assignment.title) : "Onbekende opdracht"}</strong>
+                        <div class="muted" style="font-size: 10px;">Datum: ${date} ${evaluation.attempt_number > 1 ? `(Herkansing ${evaluation.attempt_number})` : ""}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span class="history-score">${score === null ? "—" : `${score.total} /${score.max}`}</span>
+                        <button class="danger-button" style="padding: 5px 10px; font-size: 10px;" data-delete-eval="${escapeHtml(evaluation.id)}">Wissen</button>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <span class="history-score">${score === null ? "—" : `${score.total} /${score.max}`}</span>
-                    <button class="danger-button" style="padding: 5px 10px; font-size: 10px;" data-delete-eval="${escapeHtml(evaluation.id)}">Wissen</button>
-                </div>
+                ${feedbackText}
             </div>
         `;
     }).join("");
@@ -1353,9 +1433,10 @@ function buildStudentPdf(evaluation, existingDoc = null) {
     doc.setFont("helvetica", "normal");
     const evalDate = formatDate(evaluation.evaluation_date || evaluation.created_at);
     let metaText = `Datum: ${evalDate}   |   Leerkracht: dhr. J. Vermote`;
-    if (timerSeconds > 0) {
-        const mins = Math.floor(timerSeconds / 60);
-        const secs = timerSeconds % 60;
+    const recordTimer = evaluation.timer_seconds ?? timerSeconds;
+    if (recordTimer > 0) {
+        const mins = Math.floor(recordTimer / 60);
+        const secs = recordTimer % 60;
         metaText += `   |   Spreekduur: ${mins}m ${secs}s`;
     }
     doc.text(metaText, marginX, currentY);

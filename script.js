@@ -219,7 +219,6 @@ function renderEvaluationStudents() {
             currentEvaluationId = null;
             isRetake = false;
             
-            // Laad timer van laatste evaluatie indien aanwezig, anders reset
             const latest = getLatestEvaluation(selectedStudentId, selectedAssignmentId);
             if (latest && latest.timer_seconds !== undefined) {
                 timerSeconds = latest.timer_seconds;
@@ -398,7 +397,6 @@ function renderForm(assignment, evaluation) {
         updateTotalScore();
     });
 
-    // Snelcommentaren invoegen op cursorpositie zonder de rest te wissen
     container.querySelectorAll(".comment-chip").forEach(button => {
         button.addEventListener("click", () => {
             button.classList.toggle("active");
@@ -520,7 +518,6 @@ async function saveEvaluation() {
 
     try {
         if (latestExisting && !isRetake) {
-            // Overschrijf de bestaande laatste evaluatie als het geen herkansing is
             const updated = {
                 scores: data.scores,
                 excluded_parameters: data.excluded_parameters,
@@ -535,7 +532,6 @@ async function saveEvaluation() {
             if (index >= 0) state.evaluations[index] = { ...state.evaluations[index], ...updated };
             currentEvaluationId = latestExisting.id;
         } else {
-            // Sla op als nieuw record (eerste poging of expliciete herkansing)
             const newEvaluation = {
                 id: createId("evaluation_"),
                 assignment_id: selectedAssignmentId,
@@ -614,7 +610,6 @@ function renderHistory() {
         return;
     }
 
-    // Toon feedback én score bij eerdere evaluaties
     container.innerHTML = history.map(evaluation => {
         const score = calculateEvaluationScore(evaluation, assignment);
         const date = formatDate(evaluation.evaluation_date || evaluation.created_at);
@@ -673,15 +668,7 @@ function updateTimerDisplay() {
     const minutes = Math.floor(timerSeconds / 60);
     const seconds = timerSeconds % 60;
     timer.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-
-    // Kleur timer groen als de ingestelde tijdlimiet is behaald (optioneel standaard op 0 of via assignment)
-    const assignment = state.assignments.find(a => a.id === selectedAssignmentId);
-    const targetLimit = (assignment?.time_limit_seconds || 0);
-    if (targetLimit > 0 && timerSeconds >= targetLimit) {
-        timer.style.color = "var(--success)";
-    } else {
-        timer.style.color = "";
-    }
+    timer.style.color = "";
 }
 
 function toggleTimer() {
@@ -729,8 +716,6 @@ function createNewAssignment() {
     const assignment = {
         id: createId("assignment_"),
         title: "Nieuwe opdracht",
-        time_limit_minutes: 0,
-        time_limit_seconds: 0,
         order: state.assignments.length,
         comments: [],
         parameters: [
@@ -759,29 +744,6 @@ function openAssignmentEditor() {
     document.getElementById("assignmentEditor")?.classList.remove("hidden");
     document.getElementById("assignmentEditorEmpty")?.classList.add("hidden");
     document.getElementById("assignmentTitle").value = assignment.title || "";
-    
-    // Zorg dat tijdlimiet veld dynamisch wordt toegevoegd of beheerd in de editor
-    let timeLimitInput = document.getElementById("assignmentTimeLimit");
-    if (!timeLimitInput) {
-        const headerActions = document.querySelector(".editor-header-actions");
-        if (headerActions) {
-            const wrapper = document.createElement("div");
-            wrapper.style.display = "flex";
-            wrapper.style.alignItems = "center";
-            wrapper.style.gap = "5px";
-            wrapper.innerHTML = `<label style="margin:0; font-size:11px;">Tijdlimiet (min):</label><input type="number" id="assignmentTimeLimit" min="0" style="width: 70px; padding: 8px;">`;
-            headerActions.parentNode.insertBefore(wrapper, headerActions);
-            timeLimitInput = document.getElementById("assignmentTimeLimit");
-            timeLimitInput.addEventListener("input", (e) => {
-                assignment.time_limit_minutes = Number(e.target.value) || 0;
-                assignment.time_limit_seconds = assignment.time_limit_minutes * 60;
-            });
-        }
-    }
-    if (timeLimitInput) {
-        timeLimitInput.value = assignment.time_limit_minutes || (assignment.time_limit_seconds ? Math.floor(assignment.time_limit_seconds / 60) : 0);
-    }
-
     renderCommentsBuilder(assignment);
     renderParametersBuilder(assignment);
 }
@@ -934,11 +896,6 @@ async function saveAssignment() {
         return;
     }
     assignment.title = title;
-    const timeLimitInput = document.getElementById("assignmentTimeLimit");
-    if (timeLimitInput) {
-        assignment.time_limit_minutes = Number(timeLimitInput.value) || 0;
-        assignment.time_limit_seconds = assignment.time_limit_minutes * 60;
-    }
     assignment.parameters.forEach(p => p.levels.forEach(l => l.score = Number(l.score)));
 
     try {

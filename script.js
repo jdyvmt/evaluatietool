@@ -147,7 +147,8 @@ function setupEvaluationEvents() {
         document.getElementById("evaluationHistory")?.classList.toggle("hidden");
     });
 
-    document.getElementById("timerToggle")?.addEventListener("click", toggleTimer);
+    document.getElementById("timerStart")?.addEventListener("click", startTimer);
+document.getElementById("timerPause")?.addEventListener("click", pauseTimer);
     document.getElementById("timerReset")?.addEventListener("click", resetTimer);
 }
 
@@ -671,19 +672,9 @@ function updateTimerDisplay() {
     timer.style.color = "";
 }
 
-function toggleTimer() {
-    if (timerRunning) {
-        pauseTimer();
-    } else {
-        startTimer();
-    }
-}
-
 function startTimer() {
     if (timerRunning) return;
     timerRunning = true;
-    const toggleBtn = document.getElementById("timerToggle");
-    if (toggleBtn) toggleBtn.textContent = "⏸";
     timerInterval = setInterval(() => {
         timerSeconds++;
         updateTimerDisplay();
@@ -693,8 +684,6 @@ function startTimer() {
 function pauseTimer() {
     timerRunning = false;
     clearInterval(timerInterval);
-    const toggleBtn = document.getElementById("timerToggle");
-    if (toggleBtn) toggleBtn.textContent = "▶";
 }
 
 function resetTimer() {

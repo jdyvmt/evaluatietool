@@ -254,19 +254,25 @@
                         </select>
                     </div>
 
-                    <div>
-                        <label>Selecteer klassen</label>
-                        <div id="bulkExportClassesList" style="border: 1px solid var(--border); border-radius: 10px; padding: 12px; max-height: 160px; overflow-y: auto; background: var(--surface-soft);"></div>
-                    </div>
+                   <div>
+    <label>Selecteer klassen</label>
+    <div id="bulkExportClassesList" class="bulk-classes-container"></div>
+</div>
 
-                    <div>
-                        <label for="bulkExportMode">Export formaat</label>
-                        <select id="bulkExportMode">
-                            <option value="single">Eén verzamelbestand (alle leerlingen in 1 multi-page PDF)</option>
-                            <option value="multiple">Individuele bestanden per leerling</option>
-                        </select>
-                    </div>
+<div>
+    <label for="bulkExportMode">Export formaat</label>
+    <select id="bulkExportMode">
+        <option value="single">Eén verzamelbestand (alle leerlingen in 1 multi-page PDF)</option>
+        <option value="multiple">Individuele bestanden per leerling (apart gedownload)</option>
+        <option value="class_files">Per klas een verzamelbestand (elke klas apart in 1 PDF)</option>
+    </select>
+</div>
 
+                    <div class="field" style="margin-bottom: 15px;">
+    <label for="classCategoryInput">Categorie (bijv. 3de jaar, 4de jaar)</label>
+    <input type="text" id="classCategoryInput" placeholder="Bijv. 3de jaar...">
+</div>
+                    
                     <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
                         <button type="button" id="bulkExportBtn" class="primary-button">Start Bulk Export</button>
                     </div>

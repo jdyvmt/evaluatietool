@@ -10,7 +10,9 @@
 </head>
 <body>
 
-    <!-- TOPBAR -->
+    <!-- =========================================================
+       TOPBAR
+    ========================================================= -->
     <header class="topbar">
         <div class="brand">
             <div class="brand-mark">E</div>
@@ -34,7 +36,9 @@
     </header>
 
     <main>
-        <!-- ================= EVALUATIES PAGINA ================= -->
+        <!-- =========================================================
+           PAGINA 1: EVALUATIE
+        ========================================================= -->
         <section id="evaluations" class="page active-page">
             <div class="evaluation-layout">
                 <!-- Selectiepaneel links -->
@@ -51,7 +55,7 @@
 
                     <div class="student-filter-row">
                         <input type="text" id="studentSearch" placeholder="Zoek leerling...">
-                        <button type="button" id="filterUnevaluated" class="filter-button" title="Toon enkel onbeoordeeld">Nog niet</button>
+                        <button type="button" id="filterUnevaluated" class="filter-button">Nog niet</button>
                     </div>
 
                     <div id="studentList" class="student-list">
@@ -114,7 +118,9 @@
             </div>
         </section>
 
-        <!-- ================= OPDRACHTEN PAGINA ================= -->
+        <!-- =========================================================
+           PAGINA 2: OPDRACHTEN
+        ========================================================= -->
         <section id="assignments" class="page">
             <div class="assignment-layout">
                 <div class="card assignment-list">
@@ -181,7 +187,9 @@
             </div>
         </section>
 
-        <!-- ================= KLASSEN & LEERLINGEN PAGINA ================= -->
+        <!-- =========================================================
+           PAGINA 3: KLASSEN & LEERLINGEN
+        ========================================================= -->
         <section id="classes" class="page">
             <div class="students-layout">
                 <div class="card class-list">
@@ -208,6 +216,14 @@
                             </div>
                         </div>
 
+                        <!-- Toegevoegd veld om direct categorie in te stellen bij klas -->
+                        <div class="form-grid" style="margin-top: 20px;">
+                            <div class="field full">
+                                <label for="classCategoryInput">Klas Categorie (bijv. 3de jaar, 4de jaar)</label>
+                                <input type="text" id="classCategoryInput" placeholder="Bijv. 3de jaar...">
+                            </div>
+                        </div>
+
                         <div class="student-add">
                             <input type="text" id="newStudentName" placeholder="Volledige naam leerling...">
                             <button type="button" id="addStudent" class="primary-button">Toevoegen</button>
@@ -230,13 +246,15 @@
             </div>
         </section>
 
-        <!-- ================= BULK EXPORT PAGINA ================= -->
+        <!-- =========================================================
+           PAGINA 4: BULK EXPORT
+        ========================================================= -->
         <section id="bulkExport" class="page">
             <div class="card" style="max-width: 700px; margin: 0 auto; padding: 32px;">
                 <div class="card-header">
                     <span class="eyebrow">GEAVANCEERD</span>
                     <h2>In één klik PDF's exporteren</h2>
-                    <p class="muted">Selecteer de criteria en kies of je alles in één verzamelbestand of individueel wilt downloaden.</p>
+                    <p class="muted">Selecteer de criteria en kies of je alles in één verzamelbestand, per klas of individueel wilt downloaden.</p>
                 </div>
 
                 <div style="display: flex; flex-direction: column; gap: 18px;">
@@ -254,25 +272,21 @@
                         </select>
                     </div>
 
-                   <div>
-    <label>Selecteer klassen</label>
-    <div id="bulkExportClassesList" class="bulk-classes-container"></div>
-</div>
+                    <div>
+                        <label>Selecteer klassen</label>
+                        <!-- Gebruikt de nette scrollbare en uitgelijnde container uit je stijlen -->
+                        <div id="bulkExportClassesList" class="bulk-classes-container"></div>
+                    </div>
 
-<div>
-    <label for="bulkExportMode">Export formaat</label>
-    <select id="bulkExportMode">
-        <option value="single">Eén verzamelbestand (alle leerlingen in 1 multi-page PDF)</option>
-        <option value="multiple">Individuele bestanden per leerling (apart gedownload)</option>
-        <option value="class_files">Per klas een verzamelbestand (elke klas apart in 1 PDF)</option>
-    </select>
-</div>
+                    <div>
+                        <label for="bulkExportMode">Export formaat</label>
+                        <select id="bulkExportMode">
+                            <option value="single">Eén verzamelbestand (alle leerlingen in 1 multi-page PDF)</option>
+                            <option value="multiple">Individuele bestanden per leerling (apart gedownload)</option>
+                            <option value="class_files">Per klas een verzamelbestand (elke geselecteerde klas apart in 1 PDF)</option>
+                        </select>
+                    </div>
 
-                    <div class="field" style="margin-bottom: 15px;">
-    <label for="classCategoryInput">Categorie (bijv. 3de jaar, 4de jaar)</label>
-    <input type="text" id="classCategoryInput" placeholder="Bijv. 3de jaar...">
-</div>
-                    
                     <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
                         <button type="button" id="bulkExportBtn" class="primary-button">Start Bulk Export</button>
                     </div>
@@ -281,7 +295,9 @@
         </section>
     </main>
 
-    <!-- LEERLING DETAIL SLIDE-OUT / MODAL -->
+    <!-- =========================================================
+       LEERLING DETAIL MODAL / SLIDE-OUT
+    ========================================================= -->
     <div id="studentDetail" class="card hidden student-detail" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(600px, calc(100vw - 30px)); max-height: 90vh; overflow-y: auto; z-index: 1000;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 15px;">
             <h2 id="studentDetailName">Leerling Details</h2>
@@ -299,7 +315,9 @@
         <div id="studentEvaluationHistory" style="margin-top: 12px;"></div>
     </div>
 
-    <!-- TOAST NOTIFICATIE -->
+    <!-- =========================================================
+       TOAST NOTIFICATIE
+    ========================================================= -->
     <div id="toast" class="toast">
         <span id="toastMessage"></span>
     </div>

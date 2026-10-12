@@ -800,6 +800,20 @@ function renderHistory() {
     });
 }
 
+function updateTimerDisplay() {
+    const timer = document.getElementById("timerDisplay");
+    const toggleBtn = document.getElementById("timerToggle");
+    if (!timer) return;
+    
+    const minutes = Math.floor(timerSeconds / 60);
+    const seconds = timerSeconds % 60;
+    timer.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+    if (toggleBtn) {
+        toggleBtn.textContent = timerRunning ? "⏸" : "▶";
+    }
+}
+
 function toggleTimer() {
     if (timerRunning) {
         pauseTimer();
@@ -811,9 +825,9 @@ function toggleTimer() {
 function startTimer() {
     if (timerRunning) return;
     timerRunning = true;
-    const toggleBtn = document.getElementById("timerToggle");
-    if (toggleBtn) toggleBtn.textContent = "⏸";
+    updateTimerDisplay();
     
+    clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         timerSeconds++;
         updateTimerDisplay();
@@ -823,8 +837,7 @@ function startTimer() {
 function pauseTimer() {
     timerRunning = false;
     clearInterval(timerInterval);
-    const toggleBtn = document.getElementById("timerToggle");
-    if (toggleBtn) toggleBtn.textContent = "▶";
+    updateTimerDisplay();
 }
 
 function resetTimer() {
@@ -833,13 +846,6 @@ function resetTimer() {
     updateTimerDisplay();
 }
 
-function updateTimerDisplay() {
-    const timer = document.getElementById("timerDisplay");
-    if (!timer) return;
-    const minutes = Math.floor(timerSeconds / 60);
-    const seconds = timerSeconds % 60;
-    timer.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
 function setupAssignmentEvents() {
     document.getElementById("newAssignment")?.addEventListener("click", createNewAssignment);
     document.getElementById("addComment")?.addEventListener("click", addCommentField);

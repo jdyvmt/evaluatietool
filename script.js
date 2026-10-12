@@ -148,8 +148,7 @@ function setupEvaluationEvents() {
         document.getElementById("evaluationHistory")?.classList.toggle("hidden");
     });
 
-    document.getElementById("timerStart")?.addEventListener("click", startTimer);
-    document.getElementById("timerPause")?.addEventListener("click", pauseTimer);
+   document.getElementById("timerToggle")?.addEventListener("click", toggleTimer);
     document.getElementById("timerReset")?.addEventListener("click", resetTimer);
 }
 
@@ -801,18 +800,20 @@ function renderHistory() {
     });
 }
 
-function updateTimerDisplay() {
-    const timer = document.getElementById("timerDisplay");
-    if (!timer) return;
-    const minutes = Math.floor(timerSeconds / 60);
-    const seconds = timerSeconds % 60;
-    timer.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-    timer.style.color = "";
+function toggleTimer() {
+    if (timerRunning) {
+        pauseTimer();
+    } else {
+        startTimer();
+    }
 }
 
 function startTimer() {
     if (timerRunning) return;
     timerRunning = true;
+    const toggleBtn = document.getElementById("timerToggle");
+    if (toggleBtn) toggleBtn.textContent = "⏸";
+    
     timerInterval = setInterval(() => {
         timerSeconds++;
         updateTimerDisplay();
@@ -822,6 +823,8 @@ function startTimer() {
 function pauseTimer() {
     timerRunning = false;
     clearInterval(timerInterval);
+    const toggleBtn = document.getElementById("timerToggle");
+    if (toggleBtn) toggleBtn.textContent = "▶";
 }
 
 function resetTimer() {
@@ -830,6 +833,13 @@ function resetTimer() {
     updateTimerDisplay();
 }
 
+function updateTimerDisplay() {
+    const timer = document.getElementById("timerDisplay");
+    if (!timer) return;
+    const minutes = Math.floor(timerSeconds / 60);
+    const seconds = timerSeconds % 60;
+    timer.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
 function setupAssignmentEvents() {
     document.getElementById("newAssignment")?.addEventListener("click", createNewAssignment);
     document.getElementById("addComment")?.addEventListener("click", addCommentField);

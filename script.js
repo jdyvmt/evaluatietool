@@ -186,7 +186,7 @@ function renderBulkExportSelectors() {
 
     const sortedAssignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     assignSelect.innerHTML = `<option value="">Kies een opdracht...</option>` +
-        sortedAssignments.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.title)}</option>`).join("");
+        sortedAssignments.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.title)} ${a.category ? `(${escapeHtml(a.category)})` : ''}</option>`).join("");
 
     const categories = [...new Set(state.assignments.map(a => a.category).filter(Boolean))];
     catSelect.innerHTML = `<option value="">Alle categorieën</option>` +
@@ -194,8 +194,9 @@ function renderBulkExportSelectors() {
 
     const sortedClasses = [...state.classes].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
     classContainer.innerHTML = sortedClasses.map(c => `
-        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 4px; cursor: pointer;">
-            <input type="checkbox" class="bulk-class-checkbox" value="${escapeHtml(c.id)}" checked> ${escapeHtml(c.name)} ${c.category ? `(${escapeHtml(c.category)})` : ''}
+        <label class="bulk-class-label">
+            <input type="checkbox" class="bulk-class-checkbox" value="${escapeHtml(c.id)}" checked> 
+            <span>${escapeHtml(c.name)}</span> ${c.category ? `<span class="muted" style="font-size:11px;">(${escapeHtml(c.category)})</span>` : ''}
         </label>
     `).join("");
 }
@@ -206,7 +207,7 @@ function updateBulkExportOptions() {
 
 function executeBulkExport() {
     const assignmentId = document.getElementById("bulkExportAssignment")?.value;
-    const exportMode = document.getElementById("bulkExportMode")?.value || "single"; // 'single' of 'multiple'
+    const exportMode = document.getElementById("bulkExportMode")?.value || "single"; // 'single', 'multiple', of 'class_files'
     const selectedClassIds = Array.from(document.querySelectorAll(".bulk-class-checkbox:checked")).map(cb => cb.value);
 
     if (!assignmentId) {
@@ -215,8 +216,43 @@ function executeBulkExport() {
     }
 
     const assignment = state.assignments.find(a => a.id === assignmentId);
-    const targetStudents = state.students.filter(s => selectedClassIds.includes(s.class_id));
 
+    if (exportMode === "class_files") {
+        let countFiles = 0;
+        selectedClassIds.forEach(classId => {
+            const cls = state.classes.find(c => c.id === classId);
+            const classStudents = state.students.filter(s => s.class_id === classId);
+            let classDoc = null;
+            let evaluatedInClass = 0;
+
+            classStudents.forEach(student => {
+                const evaluation = getLatestEvaluation(student.id, assignmentId);
+                if (!evaluation) return;
+                evaluatedInClass++;
+                if (!classDoc) {
+                    classDoc = buildStudentPdf(evaluation);
+                } else {
+                    classDoc.addPage();
+                    buildStudentPdf(evaluation, classDoc);
+                }
+            });
+
+            if (classDoc && evaluatedInClass > 0) {
+                classDoc.save(`Klas ${cls?.name || "Onbekend"} - ${assignment.title}.pdf`);
+                countFiles++;
+            }
+        });
+
+        if (countFiles === 0) {
+            showToast("Geen ingevulde evaluaties gevonden in de geselecteerde klassen.");
+        } else {
+            showToast(`${countFiles} klas-bestand(en) gedownload.`);
+        }
+        return;
+    }
+
+    // Bestaande logica voor 'single' en 'multiple'
+    const targetStudents = state.students.filter(s => selectedClassIds.includes(s.class_id));
     if (!targetStudents.length) {
         showToast("Geen leerlingen gevonden in de geselecteerde klassen.");
         return;
@@ -239,7 +275,6 @@ function executeBulkExport() {
             }
         } else {
             const doc = buildStudentPdf(evaluation);
-            const cls = state.classes.find(c => c.id === student.class_id);
             if (doc) {
                 doc.save(`${student.name} - ${assignment.title}.pdf`);
             }
@@ -1214,13 +1249,25 @@ function renderClassContent() {
     content.classList.remove("hidden");
 
     document.getElementById("classTitle").textContent = `${cls.name} ${cls.category ? `(${cls.category})` : ''}`;
+    
+    // Koppel ook aan het invoerveld indien aanwezig
+    const catInput = document.getElementById("classCategoryInput");
+    if (catInput) {
+        catInput.value = cls.category || "";
+        catInput.onchange = async () => {
+            cls.category = catInput.value.trim();
+            await dbUpdate("classes", cls.id, { category: cls.category });
+            renderClasses();
+            showToast("Klascategorie opgeslagen.");
+        };
+    }
+
     const students = state.students.filter(s => s.class_id === cls.id);
     document.getElementById("classStudentCount").textContent = students.length;
 
     renderStudentsTable(students);
     renderClassScoreOverview();
 }
-
 function renderStudentsTable(students) {
     const container = document.getElementById("studentsTable");
     if (!container) return;

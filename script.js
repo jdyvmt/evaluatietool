@@ -39,6 +39,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupEvaluationEvents();
     setupAssignmentEvents();
     setupStudentEvents();
+    setupExportEvents();
 
     try {
         await loadFromFirebase();
@@ -148,8 +149,13 @@ function setupEvaluationEvents() {
     });
 
     document.getElementById("timerStart")?.addEventListener("click", startTimer);
-document.getElementById("timerPause")?.addEventListener("click", pauseTimer);
+    document.getElementById("timerPause")?.addEventListener("click", pauseTimer);
     document.getElementById("timerReset")?.addEventListener("click", resetTimer);
+}
+
+function setupExportEvents() {
+    document.getElementById("bulkExportBtn")?.addEventListener("click", executeBulkExport);
+    document.getElementById("bulkExportAssignment")?.addEventListener("change", updateBulkExportOptions);
 }
 
 function renderEvaluationSelectors() {
@@ -159,14 +165,97 @@ function renderEvaluationSelectors() {
 
     const sortedAssignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     assignmentSelect.innerHTML = `<option value="">Kies een opdracht...</option>` + 
-        sortedAssignments.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.title)}</option>`).join("");
+        sortedAssignments.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.title)} ${a.category ? `(${escapeHtml(a.category)})` : ''}</option>`).join("");
 
     const sortedClasses = [...state.classes].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
     classSelect.innerHTML = `<option value="">Kies een klas...</option>` + 
-        sortedClasses.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join("");
+        sortedClasses.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)} ${c.category ? `(${escapeHtml(c.category)})` : ''}</option>`).join("");
 
     if (selectedAssignmentId) assignmentSelect.value = selectedAssignmentId;
     if (selectedClassId) classSelect.value = selectedClassId;
+    
+    renderBulkExportSelectors();
+}
+
+function renderBulkExportSelectors() {
+    const assignSelect = document.getElementById("bulkExportAssignment");
+    const catSelect = document.getElementById("bulkExportCategory");
+    const classContainer = document.getElementById("bulkExportClassesList");
+
+    if (!assignSelect || !catSelect || !classContainer) return;
+
+    const sortedAssignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    assignSelect.innerHTML = `<option value="">Kies een opdracht...</option>` +
+        sortedAssignments.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.title)}</option>`).join("");
+
+    const categories = [...new Set(state.assignments.map(a => a.category).filter(Boolean))];
+    catSelect.innerHTML = `<option value="">Alle categorieën</option>` +
+        categories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join("");
+
+    const sortedClasses = [...state.classes].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    classContainer.innerHTML = sortedClasses.map(c => `
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 4px; cursor: pointer;">
+            <input type="checkbox" class="bulk-class-checkbox" value="${escapeHtml(c.id)}" checked> ${escapeHtml(c.name)} ${c.category ? `(${escapeHtml(c.category)})` : ''}
+        </label>
+    `).join("");
+}
+
+function updateBulkExportOptions() {
+    // Eventueel extra dynamische logica voor bulk export filters
+}
+
+function executeBulkExport() {
+    const assignmentId = document.getElementById("bulkExportAssignment")?.value;
+    const exportMode = document.getElementById("bulkExportMode")?.value || "single"; // 'single' of 'multiple'
+    const selectedClassIds = Array.from(document.querySelectorAll(".bulk-class-checkbox:checked")).map(cb => cb.value);
+
+    if (!assignmentId) {
+        showToast("Selecteer ten minste een opdracht.");
+        return;
+    }
+
+    const assignment = state.assignments.find(a => a.id === assignmentId);
+    const targetStudents = state.students.filter(s => selectedClassIds.includes(s.class_id));
+
+    if (!targetStudents.length) {
+        showToast("Geen leerlingen gevonden in de geselecteerde klassen.");
+        return;
+    }
+
+    let masterDoc = null;
+    let exportedCount = 0;
+
+    targetStudents.forEach(student => {
+        const evaluation = getLatestEvaluation(student.id, assignmentId);
+        if (!evaluation) return;
+
+        exportedCount++;
+        if (exportMode === "single") {
+            if (!masterDoc) {
+                masterDoc = buildStudentPdf(evaluation);
+            } else {
+                masterDoc.addPage();
+                buildStudentPdf(evaluation, masterDoc);
+            }
+        } else {
+            const doc = buildStudentPdf(evaluation);
+            const cls = state.classes.find(c => c.id === student.class_id);
+            if (doc) {
+                doc.save(`${student.name} - ${assignment.title}.pdf`);
+            }
+        }
+    });
+
+    if (exportedCount === 0) {
+        showToast("Geen ingevulde evaluaties gevonden voor deze selectie.");
+        return;
+    }
+
+    if (exportMode === "single" && masterDoc) {
+        masterDoc.save(`Export - ${assignment.title}.pdf`);
+    }
+
+    showToast(`Bulk export voltooid (${exportedCount} bestand(en)).`);
 }
 
 function renderEvaluationStudents() {
@@ -256,7 +345,7 @@ function renderEvaluationForm() {
 
     if (studentName) studentName.textContent = student.name;
     const cls = state.classes.find(c => c.id === student.class_id);
-    if (meta) meta.textContent = `${assignment.title} · ${cls ? cls.name : ""}`;
+    if (meta) meta.textContent = `${assignment.title} ${assignment.category ? `[${assignment.category}]` : ''} · ${cls ? cls.name : ""}`;
 
     let evaluation = currentEvaluationId ? state.evaluations.find(e => e.id === currentEvaluationId) : null;
     if (!evaluation && !isRetake) {
@@ -581,6 +670,19 @@ function getEvaluationHistory(studentId, assignmentId) {
         .sort((a, b) => new Date(b.created_at || b.evaluation_date) - new Date(a.created_at || a.evaluation_date));
 }
 
+// Aangepast: Haalt alle eerdere evaluaties op voor dezelfde categorie binnen de geselecteerde leerling
+function getCategoryEvaluationHistory(studentId, assignmentId) {
+    const currentAssignment = state.assignments.find(a => a.id === assignmentId);
+    const category = currentAssignment?.category;
+
+    return state.evaluations.filter(e => {
+        if (e.student_id !== studentId) return false;
+        if (!category) return e.assignment_id === assignmentId; // Fallback indien geen categorie
+        const assignment = state.assignments.find(a => a.id === e.assignment_id);
+        return assignment && assignment.category === category;
+    }).sort((a, b) => new Date(b.created_at || b.evaluation_date) - new Date(a.created_at || a.evaluation_date));
+}
+
 function getLatestEvaluation(studentId, assignmentId) {
     return getEvaluationHistory(studentId, assignmentId)[0] || null;
 }
@@ -603,15 +705,16 @@ function renderHistory() {
         return;
     }
 
-    const history = getEvaluationHistory(selectedStudentId, selectedAssignmentId);
-    const assignment = state.assignments.find(a => a.id === selectedAssignmentId);
+    // Gebruik nu de categorie-brede geschiedenis
+    const history = getCategoryEvaluationHistory(selectedStudentId, selectedAssignmentId);
 
     if (!history.length) {
-        container.innerHTML = `<div class="empty-state small">Nog geen eerdere evaluaties.</div>`;
+        container.innerHTML = `<div class="empty-state small">Nog geen eerdere evaluaties in deze categorie.</div>`;
         return;
     }
 
     container.innerHTML = history.map(evaluation => {
+        const assignment = state.assignments.find(a => a.id === evaluation.assignment_id);
         const score = calculateEvaluationScore(evaluation, assignment);
         const date = formatDate(evaluation.evaluation_date || evaluation.created_at);
         const feedbackPreview = evaluation.feedback ? `<div style="font-size: 11px; color: var(--muted); margin-top: 4px; white-space: pre-wrap;"><strong>Feedback:</strong> ${escapeHtml(evaluation.feedback)}</div>` : "";
@@ -619,12 +722,12 @@ function renderHistory() {
             <div class="history-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="history-date">
-                        <strong>${date}</strong>
+                        <strong>${assignment ? escapeHtml(assignment.title) : 'Opdracht'}</strong> - <span>${date}</span>
                         <div class="history-attempt">${evaluation.attempt_number > 1 ? `Herkansing ${evaluation.attempt_number}` : "Eerste evaluatie"} ${evaluation.penalty_points ? `(Strafpunten: -${evaluation.penalty_points})` : ""}</div>
                     </div>
                     <div class="history-score">${score === null ? "—" : `${score.total} /${score.max}`}</div>
                     <div class="history-actions">
-                        <button data-history-edit="${escapeHtml(evaluation.id)}">Bewerken</button>
+                        ${evaluation.assignment_id === selectedAssignmentId ? `<button data-history-edit="${escapeHtml(evaluation.id)}">Bewerken</button>` : ''}
                         <button data-history-delete="${escapeHtml(evaluation.id)}">Verwijderen</button>
                     </div>
                 </div>
@@ -699,12 +802,17 @@ function setupAssignmentEvents() {
     document.getElementById("saveAssignment")?.addEventListener("click", saveAssignment);
     document.getElementById("duplicateAssignment")?.addEventListener("click", duplicateAssignment);
     document.getElementById("deleteAssignment")?.addEventListener("click", deleteAssignment);
+    document.getElementById("assignmentCategory")?.addEventListener("input", (e) => {
+        const assignment = getEditingAssignment();
+        if (assignment) assignment.category = e.target.value.trim();
+    });
 }
 
 function createNewAssignment() {
     const assignment = {
         id: createId("assignment_"),
         title: "Nieuwe opdracht",
+        category: "",
         order: state.assignments.length,
         comments: [],
         parameters: [
@@ -733,6 +841,25 @@ function openAssignmentEditor() {
     document.getElementById("assignmentEditor")?.classList.remove("hidden");
     document.getElementById("assignmentEditorEmpty")?.classList.add("hidden");
     document.getElementById("assignmentTitle").value = assignment.title || "";
+    
+    let catInput = document.getElementById("assignmentCategory");
+    if (!catInput) {
+        // Indien veld in HTML ontbreekt, dynamisch toevoegen onder de titel
+        const titleInput = document.getElementById("assignmentTitle");
+        if (titleInput && titleInput.parentNode) {
+            const wrapper = document.createElement("div");
+            wrapper.style.marginTop = "10px";
+            wrapper.innerHTML = `<label style="font-size:11px; display:block; margin-bottom:4px;">Categorie (bijv. Schrijven, Spreken)</label><input type="text" id="assignmentCategory" placeholder="Categorie..." style="width:100%;">`;
+            titleInput.parentNode.appendChild(wrapper);
+            catInput = document.getElementById("assignmentCategory");
+            catInput.addEventListener("input", (e) => {
+                const cur = getEditingAssignment();
+                if (cur) cur.category = e.target.value.trim();
+            });
+        }
+    }
+    if (catInput) catInput.value = assignment.category || "";
+
     renderCommentsBuilder(assignment);
     renderParametersBuilder(assignment);
 }
@@ -885,6 +1012,9 @@ async function saveAssignment() {
         return;
     }
     assignment.title = title;
+    const catInput = document.getElementById("assignmentCategory");
+    if (catInput) assignment.category = catInput.value.trim();
+
     assignment.parameters.forEach(p => p.levels.forEach(l => l.score = Number(l.score)));
 
     try {
@@ -959,7 +1089,7 @@ function renderAssignments() {
             <div class="assignment-item ${active ? "active" : ""}">
                 <button type="button" class="assignment-item-main" data-assignment-id="${escapeHtml(assignment.id)}">
                     <strong>${escapeHtml(assignment.title)}</strong>
-                    <span>${parameterCount} criteria</span>
+                    <span>${assignment.category ? `[${escapeHtml(assignment.category)}] ` : ''}${parameterCount} criteria</span>
                 </button>
                 <div class="assignment-order-actions">
                     <button type="button" class="order-btn" data-move-up="${escapeHtml(assignment.id)}" ${index === 0 ? "disabled" : ""}>▲</button>
@@ -1029,7 +1159,8 @@ function setupStudentEvents() {
 async function createClass() {
     const name = prompt("Naam van de nieuwe klas:");
     if (!name?.trim()) return;
-    const cls = { id: createId("class_"), name: name.trim(), created_at: new Date().toISOString() };
+    const category = prompt("Categorie van de klas (bijv. 3de jaar, 4de jaar):", "") || "";
+    const cls = { id: createId("class_"), name: name.trim(), category: category.trim(), created_at: new Date().toISOString() };
     try {
         const result = await dbInsert("classes", cls);
         state.classes.push(result);
@@ -1053,7 +1184,7 @@ function renderClasses() {
         const count = state.students.filter(s => s.class_id === cls.id).length;
         return `
             <div class="class-item ${cls.id === selectedClassId ? "active" : ""}" data-class-id="${escapeHtml(cls.id)}">
-                <div class="class-item-name">${escapeHtml(cls.name)}</div>
+                <div class="class-item-name">${escapeHtml(cls.name)} ${cls.category ? `<span class="muted" style="font-size:10px;">(${escapeHtml(cls.category)})</span>` : ''}</div>
                 <div class="class-item-count">${count}</div>
             </div>
         `;
@@ -1082,7 +1213,7 @@ function renderClassContent() {
     empty.classList.add("hidden");
     content.classList.remove("hidden");
 
-    document.getElementById("classTitle").textContent = cls.name;
+    document.getElementById("classTitle").textContent = `${cls.name} ${cls.category ? `(${cls.category})` : ''}`;
     const students = state.students.filter(s => s.class_id === cls.id);
     document.getElementById("classStudentCount").textContent = students.length;
 
@@ -1201,8 +1332,10 @@ async function editClass() {
     if (!cls) return;
     const name = prompt("Nieuwe naam:", cls.name);
     if (!name?.trim()) return;
-    await dbUpdate("classes", cls.id, { name: name.trim() });
+    const category = prompt("Nieuwe categorie:", cls.category || "") || "";
+    await dbUpdate("classes", cls.id, { name: name.trim(), category: category.trim() });
     cls.name = name.trim();
+    cls.category = category.trim();
     renderAll();
     showToast("Klas aangepast.");
 }
@@ -1258,7 +1391,7 @@ function renderStudentEvaluationHistory() {
             <div class="history-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <strong>${assignment ? escapeHtml(assignment.title) : "Onbekende opdracht"}</strong>
+                        <strong>${assignment ? escapeHtml(assignment.title) : "Onbekende opdracht"}</strong> ${assignment?.category ? `[${escapeHtml(assignment.category)}]` : ''}
                         <div class="muted" style="font-size: 10px;">Datum: ${date} ${evaluation.attempt_number > 1 ? `(Herkansing ${evaluation.attempt_number})` : ""}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 15px;">
@@ -1486,6 +1619,7 @@ function renderAll() {
     renderEvaluationStudents();
     renderEvaluationForm();
     renderClassContent();
+    renderBulkExportSelectors();
 }
 
 function escapeHtml(value) {

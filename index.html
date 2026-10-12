@@ -1,32 +1,302 @@
-<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script type="module" src="script.js" defer></script></head><body>
-<span id="connectionDot"></span><span id="connectionText"></span>
-<button class="nav-button active" data-page="evaluations">Eval</button>
-<button class="nav-button" data-page="assignments">Opdr</button>
-<button class="nav-button" data-page="classes">Klass</button>
-<div id="evaluations" class="page active-page">
-<select id="evaluationAssignment"></select><select id="evaluationClass"></select>
-<input id="studentSearch"><button id="filterUnevaluated">F</button>
-<div id="studentList"></div><h2 id="selectedStudentName"></h2><div id="evaluationMeta"></div>
-<div id="evaluationFormContainer"></div><div id="totalScore"></div>
-<button id="retakeButton">Herk</button><button id="saveEvaluation">Opslaan</button>
-<button id="exportStudent">PDF</button><button id="exportClass">KlasPDF</button>
-<button id="toggleHistory">Hist</button><div id="evaluationHistory" class="hidden"></div>
-<button id="timerStart">Start</button><button id="timerPause">Pauze</button><button id="timerReset">Res</button><span id="timerDisplay">00:00</span>
-<select id="bulkExportAssignment"></select><select id="bulkExportCategory"></select>
-<div id="bulkExportClassesList"></div><select id="bulkExportMode"><option value="single">1</option><option value="multiple">M</option></select>
-<button id="bulkExportBtn">Bulk</button></div>
-<div id="assignments" class="page"><button id="newAssignment">Nieuw</button><div id="assignmentList"></div>
-<div id="assignmentEditorEmpty"></div>
-<div id="assignmentEditor" class="hidden"><input id="assignmentTitle"><input id="assignmentCategory">
-<div id="commentsBuilder"></div><button id="addComment">+</button><div id="parametersBuilder"></div><button id="addParameter">+</button>
-<button id="saveAssignment">Opslaan</button><button id="duplicateAssignment">Kopie</button><button id="deleteAssignment">Del</button></div></div>
-<div id="classes" class="page"><button id="newClass">Nieuw</button><div id="classList"></div>
-<div id="classEmpty"></div>
-<div id="classContent" class="hidden"><h2 id="classTitle"></h2><span id="classStudentCount"></span>
-<button id="editClass">Edit</button><button id="deleteClass">Del</button><input id="newStudentName"><button id="addStudent">+</button>
-<div id="studentsTable"></div><div id="classScoresContainer"></div></div></div>
-<div id="studentDetail" class="hidden"><h3 id="studentDetailName"></h3><select id="studentClassChange"></select>
-<button id="saveStudentClass">Bewaar</button><div id="studentEvaluationHistory"></div><button id="closeStudentDetail">X</button></div>
-<div id="toast"><span id="toastMessage"></span></div></body></html>
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluatietool</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script type="module" src="script.js" defer></script>
+</head>
+<body>
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-mark">E</div>
+            <div>
+                <div class="brand-title">EVALUATIETOOL</div>
+                <div class="brand-subtitle">Secundair Onderwijs</div>
+            </div>
+        </div>
+
+        <nav class="main-nav">
+            <button class="nav-button active" data-page="evaluations">Evaluaties</button>
+            <button class="nav-button" data-page="assignments">Opdrachten</button>
+            <button class="nav-button" data-page="classes">Klassen & Leerlingen</button>
+            <button class="nav-button" data-page="bulkExport">Bulk Export</button>
+        </nav>
+
+        <div class="connection-status">
+            <span id="connectionDot"></span>
+            <span id="connectionText">Lokale modus</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- ================= EVALUATIES PAGINA ================= -->
+        <section id="evaluations" class="page active-page">
+            <div class="evaluation-layout">
+                <!-- Selectiepaneel links -->
+                <div class="card selection-panel">
+                    <label for="evaluationAssignment">Opdracht</label>
+                    <select id="evaluationAssignment">
+                        <option value="">Kies een opdracht...</option>
+                    </select>
+
+                    <label for="evaluationClass">Klas</label>
+                    <select id="evaluationClass">
+                        <option value="">Kies een klas...</option>
+                    </select>
+
+                    <div class="student-filter-row">
+                        <input type="text" id="studentSearch" placeholder="Zoek leerling...">
+                        <button type="button" id="filterUnevaluated" class="filter-button" title="Toon enkel onbeoordeeld">Nog niet</button>
+                    </div>
+
+                    <div id="studentList" class="student-list">
+                        <div class="empty-state small">Kies een klas of zoek op naam.</div>
+                    </div>
+                </div>
+
+                <!-- Formulier / Hoofdgedeelte rechts -->
+                <div class="card evaluation-main">
+                    <div class="evaluation-top">
+                        <div class="selected-student">
+                            <span class="eyebrow">LEERLING</span>
+                            <h2 id="selectedStudentName">Geen leerling geselecteerd</h2>
+                            <p id="evaluationMeta" class="muted">Kies een opdracht, klas en leerling.</p>
+                        </div>
+                        <div class="evaluation-actions">
+                            <div class="timer-box">
+                                <div class="timer-label">TIMER</div>
+                                <div id="timerDisplay">00:00</div>
+                                <div class="timer-buttons">
+                                    <button type="button" id="timerStart">Start</button>
+                                    <button type="button" id="timerPause">Pauze</button>
+                                    <button type="button" id="timerReset">Reset</button>
+                                </div>
+                            </div>
+                            <div class="score-box">
+                                <div class="timer-label">TOTAALSCORE</div>
+                                <div id="totalScore">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vorige evaluaties (categorie-breed) -->
+                    <div class="history-section">
+                        <button type="button" id="toggleHistory" class="history-toggle">
+                            <span>Vorige evaluaties in deze categorie</span>
+                            <span>▼</span>
+                        </button>
+                        <div id="evaluationHistory" class="history-content hidden">
+                            <div class="empty-state small">Selecteer een leerling.</div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamisch formulier -->
+                    <div id="evaluationFormContainer">
+                        <div class="empty-state">
+                            <div class="empty-icon">✓</div>
+                            <h3>Start een evaluatie</h3>
+                            <p>Kies links een opdracht, klas en leerling om te beginnen met evalueren.</p>
+                        </div>
+                    </div>
+
+                    <div class="bottom-actions">
+                        <button type="button" id="retakeButton" class="secondary-button">Nieuwe herkansing</button>
+                        <button type="button" id="saveEvaluation" class="primary-button">Evaluatie opslaan</button>
+                        <button type="button" id="exportStudent" class="secondary-button">Exporteer PDF</button>
+                        <button type="button" id="exportClass" class="secondary-button">Klas PDF</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= OPDRACHTEN PAGINA ================= -->
+        <section id="assignments" class="page">
+            <div class="assignment-layout">
+                <div class="card assignment-list">
+                    <button type="button" id="newAssignment" class="primary-button" style="width: 100%; margin-bottom: 15px;">+ Nieuwe opdracht</button>
+                    <div id="assignmentList"></div>
+                </div>
+
+                <div class="card assignment-editor">
+                    <div id="assignmentEditorEmpty" class="empty-state">
+                        <h3>Geen opdracht geselecteerd</h3>
+                        <p>Kies links een opdracht om te bewerken of maak een nieuwe aan.</p>
+                    </div>
+
+                    <div id="assignmentEditor" class="hidden">
+                        <div class="editor-header">
+                            <div>
+                                <span class="eyebrow">OPDRACHT BEWERKEN</span>
+                                <h2>Eigenschappen</h2>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="field full">
+                                <label for="assignmentTitle">Titel van de opdracht</label>
+                                <input type="text" id="assignmentTitle" placeholder="Bijv. Mondelinge presentatie Boekbespreking">
+                            </div>
+                            <div class="field full">
+                                <label for="assignmentCategory">Categorie (bijv. Schrijven, Spreken)</label>
+                                <input type="text" id="assignmentCategory" placeholder="Categorie...">
+                            </div>
+                        </div>
+
+                        <div class="builder-section">
+                            <div class="builder-heading">
+                                <div>
+                                    <h3>Snelcommentaren</h3>
+                                    <p class="builder-description">Voeg standaardfeedbackknoppen toe voor snelle invoer.</p>
+                                </div>
+                                <button type="button" id="addComment" class="secondary-button">+ Commentaar</button>
+                            </div>
+                            <div id="commentsBuilder"></div>
+                        </div>
+
+                        <div class="builder-section">
+                            <div class="builder-heading">
+                                <div>
+                                    <h3>Beoordelingscriteria</h3>
+                                    <p class="builder-description">Stel de parameters en bijbehorende niveaus in.</p>
+                                </div>
+                                <button type="button" id="addParameter" class="secondary-button">+ Criterium</button>
+                            </div>
+                            <div id="parametersBuilder"></div>
+                        </div>
+
+                        <div class="editor-footer">
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" id="deleteAssignment" class="danger-button">Verwijderen</button>
+                                <button type="button" id="duplicateAssignment" class="secondary-button">Dupliceren</button>
+                                <button type="button" id="saveAssignment" class="primary-button">Opdracht opslaan</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= KLASSEN & LEERLINGEN PAGINA ================= -->
+        <section id="classes" class="page">
+            <div class="students-layout">
+                <div class="card class-list">
+                    <button type="button" id="newClass" class="primary-button" style="width: 100%; margin-bottom: 15px;">+ Nieuwe klas</button>
+                    <div id="classList"></div>
+                </div>
+
+                <div class="card class-editor">
+                    <div id="classEmpty" class="empty-state">
+                        <h3>Geen klas geselecteerd</h3>
+                        <p>Kies links een klas om leerlingen en overzichten te bekijken.</p>
+                    </div>
+
+                    <div id="classContent" class="hidden">
+                        <div class="editor-header">
+                            <div>
+                                <span class="eyebrow">KLASOVERZICHT</span>
+                                <h2 id="classTitle">Klasnaam</h2>
+                                <p><span id="classStudentCount">0</span> leerlingen ingeschreven</p>
+                            </div>
+                            <div class="editor-header-actions">
+                                <button type="button" id="editClass" class="secondary-button">Klas bewerken</button>
+                                <button type="button" id="deleteClass" class="danger-button">Klas verwijderen</button>
+                            </div>
+                        </div>
+
+                        <div class="student-add">
+                            <input type="text" id="newStudentName" placeholder="Volledige naam leerling...">
+                            <button type="button" id="addStudent" class="primary-button">Toevoegen</button>
+                        </div>
+
+                        <div class="class-tabs">
+                            <button type="button" class="class-tab active" data-tab-target="tabStudents">Leerlingen</button>
+                            <button type="button" class="class-tab" data-tab-target="tabScores">Puntenoverzicht</button>
+                        </div>
+
+                        <div id="tabStudents" class="class-tab-content">
+                            <div id="studentsTable"></div>
+                        </div>
+
+                        <div id="tabScores" class="class-tab-content hidden">
+                            <div id="classScoresContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= BULK EXPORT PAGINA ================= -->
+        <section id="bulkExport" class="page">
+            <div class="card" style="max-width: 700px; margin: 0 auto; padding: 32px;">
+                <div class="card-header">
+                    <span class="eyebrow">GEAVANCEERD</span>
+                    <h2>In één klik PDF's exporteren</h2>
+                    <p class="muted">Selecteer de criteria en kies of je alles in één verzamelbestand of individueel wilt downloaden.</p>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 18px;">
+                    <div>
+                        <label for="bulkExportAssignment">Selecteer opdracht</label>
+                        <select id="bulkExportAssignment">
+                            <option value="">Kies een opdracht...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="bulkExportCategory">Categorie filter (optioneel)</label>
+                        <select id="bulkExportCategory">
+                            <option value="">Alle categorieën</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label>Selecteer klassen</label>
+                        <div id="bulkExportClassesList" style="border: 1px solid var(--border); border-radius: 10px; padding: 12px; max-height: 160px; overflow-y: auto; background: var(--surface-soft);"></div>
+                    </div>
+
+                    <div>
+                        <label for="bulkExportMode">Export formaat</label>
+                        <select id="bulkExportMode">
+                            <option value="single">Eén verzamelbestand (alle leerlingen in 1 multi-page PDF)</option>
+                            <option value="multiple">Individuele bestanden per leerling</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                        <button type="button" id="bulkExportBtn" class="primary-button">Start Bulk Export</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- LEERLING DETAIL SLIDE-OUT / MODAL -->
+    <div id="studentDetail" class="card hidden student-detail" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(600px, calc(100vw - 30px)); max-height: 90vh; overflow-y: auto; z-index: 1000;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 15px;">
+            <h2 id="studentDetailName">Leerling Details</h2>
+            <button type="button" id="closeStudentDetail" class="secondary-button" style="padding: 5px 10px;">✕</button>
+        </div>
+
+        <div class="student-class-change">
+            <label>Verplaats naar andere klas:
+                <select id="studentClassChange"></select>
+            </label>
+            <button type="button" id="saveStudentClass" class="secondary-button">Opslaan</button>
+        </div>
+
+        <h3>Evaluatiegeschiedenis</h3>
+        <div id="studentEvaluationHistory" style="margin-top: 12px;"></div>
+    </div>
+
+    <!-- TOAST NOTIFICATIE -->
+    <div id="toast" class="toast">
+        <span id="toastMessage"></span>
+    </div>
+
+</body>
+</html>

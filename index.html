@@ -10,9 +10,7 @@
 </head>
 <body>
 
-    <!-- =========================================================
-       TOPBAR
-    ========================================================= -->
+    <!-- TOPBAR -->
     <header class="topbar">
         <div class="brand">
             <div class="brand-mark">E</div>
@@ -25,7 +23,7 @@
         <nav class="main-nav">
             <button class="nav-button active" data-page="evaluations">Evaluaties</button>
             <button class="nav-button" data-page="assignments">Opdrachten</button>
-            <button class="nav-button" data-page="classes">Klassen & Leerlingen</button>
+            <button class="nav-button" data-page="classes">Klassen</button>
             <button class="nav-button" data-page="bulkExport">Bulk Export</button>
         </nav>
 
@@ -36,12 +34,9 @@
     </header>
 
     <main>
-        <!-- =========================================================
-           PAGINA 1: EVALUATIE
-        ========================================================= -->
+        <!-- EVALUATIES -->
         <section id="evaluations" class="page active-page">
             <div class="evaluation-layout">
-                <!-- Selectiepaneel links -->
                 <div class="card selection-panel">
                     <label for="evaluationAssignment">Opdracht</label>
                     <select id="evaluationAssignment">
@@ -63,7 +58,6 @@
                     </div>
                 </div>
 
-                <!-- Formulier / Hoofdgedeelte rechts -->
                 <div class="card evaluation-main">
                     <div class="evaluation-top">
                         <div class="selected-student">
@@ -88,7 +82,6 @@
                         </div>
                     </div>
 
-                    <!-- Vorige evaluaties (categorie-breed) -->
                     <div class="history-section">
                         <button type="button" id="toggleHistory" class="history-toggle">
                             <span>Vorige evaluaties in deze categorie</span>
@@ -99,7 +92,6 @@
                         </div>
                     </div>
 
-                    <!-- Dynamisch formulier -->
                     <div id="evaluationFormContainer">
                         <div class="empty-state">
                             <div class="empty-icon">✓</div>
@@ -118,9 +110,7 @@
             </div>
         </section>
 
-        <!-- =========================================================
-           PAGINA 2: OPDRACHTEN
-        ========================================================= -->
+        <!-- OPDRACHTEN -->
         <section id="assignments" class="page">
             <div class="assignment-layout">
                 <div class="card assignment-list">
@@ -145,7 +135,7 @@
                         <div class="form-grid">
                             <div class="field full">
                                 <label for="assignmentTitle">Titel van de opdracht</label>
-                                <input type="text" id="assignmentTitle" placeholder="Bijv. Mondelinge presentatie Boekbespreking">
+                                <input type="text" id="assignmentTitle" placeholder="Bijv. Mondelinge presentatie">
                             </div>
                             <div class="field full">
                                 <label for="assignmentCategory">Categorie (bijv. Schrijven, Spreken)</label>
@@ -187,9 +177,7 @@
             </div>
         </section>
 
-        <!-- =========================================================
-           PAGINA 3: KLASSEN & LEERLINGEN
-        ========================================================= -->
+        <!-- KLASSEN -->
         <section id="classes" class="page">
             <div class="students-layout">
                 <div class="card class-list">
@@ -216,7 +204,6 @@
                             </div>
                         </div>
 
-                        <!-- Toegevoegd veld om direct categorie in te stellen bij klas -->
                         <div class="form-grid" style="margin-top: 20px;">
                             <div class="field full">
                                 <label for="classCategoryInput">Klas Categorie (bijv. 3de jaar, 4de jaar)</label>
@@ -246,9 +233,7 @@
             </div>
         </section>
 
-        <!-- =========================================================
-           PAGINA 4: BULK EXPORT
-        ========================================================= -->
+        <!-- BULK EXPORT -->
         <section id="bulkExport" class="page">
             <div class="card" style="max-width: 700px; margin: 0 auto; padding: 32px;">
                 <div class="card-header">
@@ -274,7 +259,6 @@
 
                     <div>
                         <label>Selecteer klassen</label>
-                        <!-- Gebruikt de nette scrollbare en uitgelijnde container uit je stijlen -->
                         <div id="bulkExportClassesList" class="bulk-classes-container"></div>
                     </div>
 
@@ -295,9 +279,7 @@
         </section>
     </main>
 
-    <!-- =========================================================
-       LEERLING DETAIL MODAL / SLIDE-OUT
-    ========================================================= -->
+    <!-- LEERLING DETAIL MODAL -->
     <div id="studentDetail" class="card hidden student-detail" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(600px, calc(100vw - 30px)); max-height: 90vh; overflow-y: auto; z-index: 1000;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 15px;">
             <h2 id="studentDetailName">Leerling Details</h2>
@@ -315,9 +297,7 @@
         <div id="studentEvaluationHistory" style="margin-top: 12px;"></div>
     </div>
 
-    <!-- =========================================================
-       TOAST NOTIFICATIE
-    ========================================================= -->
+    <!-- TOAST NOTIFICATIE -->
     <div id="toast" class="toast">
         <span id="toastMessage"></span>
     </div>

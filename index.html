@@ -66,16 +66,16 @@
                             <p id="evaluationMeta" class="muted">Kies een opdracht, klas en leerling.</p>
                         </div>
                         <div class="evaluation-actions">
-                           <div class="timer-container">
-    <div class="timer-display-box">
-        <div class="timer-label">TIMER</div>
-        <div id="timerDisplay">00:00</div>
-    </div>
-    <div class="timer-controls">
-        <button type="button" id="timerToggle" class="timer-btn" title="Start / Pauze">▶</button>
-        <button type="button" id="timerReset" class="timer-btn" title="Reset">⟳</button>
-    </div>
-</div>
+                            <div class="timer-container">
+                                <div class="timer-display-box">
+                                    <div class="timer-label">TIMER</div>
+                                    <div id="timerDisplay">00:00</div>
+                                </div>
+                                <div class="timer-controls">
+                                    <button type="button" id="timerToggle" class="timer-btn" title="Start / Pauze">▶</button>
+                                    <button type="button" id="timerReset" class="timer-btn" title="Reset">⟳</button>
+                                </div>
+                            </div>
                             <div class="score-box">
                                 <div class="timer-label">TOTAALSCORE</div>
                                 <div id="totalScore">—</div>
@@ -227,6 +227,11 @@
                         </div>
 
                         <div id="tabScores" class="class-tab-content hidden">
+                            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                                <button type="button" id="exportClassCsvBtn" class="secondary-button" style="font-size: 11px;">
+                                    📊 Exporteer naar Excel (.csv)
+                                </button>
+                            </div>
                             <div id="classScoresContainer"></div>
                         </div>
                     </div>

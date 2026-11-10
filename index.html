@@ -16,7 +16,7 @@
             <div class="brand-mark">E</div>
             <div>
                 <div class="brand-title">EVALUATIETOOL</div>
-                <div class="brand-subtitle">Dhr. J. Vermote</div>
+                <div class="brand-subtitle">Secundair Onderwijs</div>
             </div>
         </div>
 
@@ -48,6 +48,17 @@
                         <option value="">Kies een klas...</option>
                     </select>
 
+                    <!-- NIEUW: Visuele voortgangspercentage per klas -->
+                    <div id="classProgressContainer" class="class-progress-box hidden">
+                        <div class="class-progress-info">
+                            <span id="classProgressLabel">Voortgang klas</span>
+                            <span id="classProgressText">0 / 0</span>
+                        </div>
+                        <div class="class-progress-bar-bg">
+                            <div id="classProgressBarFill" class="class-progress-bar-fill"></div>
+                        </div>
+                    </div>
+
                     <div class="student-filter-row">
                         <input type="text" id="studentSearch" placeholder="Zoek leerling...">
                         <button type="button" id="filterUnevaluated" class="filter-button">Nog niet</button>
@@ -60,10 +71,16 @@
 
                 <div class="card evaluation-main">
                     <div class="evaluation-top">
-                        <div class="selected-student">
-                            <span class="eyebrow">LEERLING</span>
-                            <h2 id="selectedStudentName">Geen leerling geselecteerd</h2>
-                            <p id="evaluationMeta" class="muted">Kies een opdracht, klas en leerling.</p>
+                        <div class="selected-student-header-group">
+                            <div class="student-nav-buttons">
+                                <button type="button" id="prevStudentBtn" class="student-nav-btn" title="Vorige leerling" disabled>▲</button>
+                                <button type="button" id="nextStudentBtn" class="student-nav-btn" title="Volgende leerling" disabled>▼</button>
+                            </div>
+                            <div class="selected-student">
+                                <span class="eyebrow">LEERLING</span>
+                                <h2 id="selectedStudentName">Geen leerling geselecteerd</h2>
+                                <p id="evaluationMeta" class="muted">Kies een opdracht, klas en leerling.</p>
+                            </div>
                         </div>
                         <div class="evaluation-actions">
                             <div class="timer-container">

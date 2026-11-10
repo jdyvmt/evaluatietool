@@ -148,7 +148,7 @@ function setupEvaluationEvents() {
         document.getElementById("evaluationHistory")?.classList.toggle("hidden");
     });
 
-   document.getElementById("timerToggle")?.addEventListener("click", toggleTimer);
+    document.getElementById("timerToggle")?.addEventListener("click", toggleTimer);
     document.getElementById("timerReset")?.addEventListener("click", resetTimer);
 }
 
@@ -200,13 +200,11 @@ function renderBulkExportSelectors() {
     `).join("");
 }
 
-function updateBulkExportOptions() {
-    // Eventueel extra dynamische logica voor bulk export filters
-}
+function updateBulkExportOptions() {}
 
 function executeBulkExport() {
     const assignmentId = document.getElementById("bulkExportAssignment")?.value;
-    const exportMode = document.getElementById("bulkExportMode")?.value || "single"; // 'single', 'multiple', of 'class_files'
+    const exportMode = document.getElementById("bulkExportMode")?.value || "single";
     const selectedClassIds = Array.from(document.querySelectorAll(".bulk-class-checkbox:checked")).map(cb => cb.value);
 
     if (!assignmentId) {
@@ -250,7 +248,6 @@ function executeBulkExport() {
         return;
     }
 
-    // Bestaande logica voor 'single' en 'multiple'
     const targetStudents = state.students.filter(s => selectedClassIds.includes(s.class_id));
     if (!targetStudents.length) {
         showToast("Geen leerlingen gevonden in de geselecteerde klassen.");
@@ -704,14 +701,13 @@ function getEvaluationHistory(studentId, assignmentId) {
         .sort((a, b) => new Date(b.created_at || b.evaluation_date) - new Date(a.created_at || a.evaluation_date));
 }
 
-// Aangepast: Haalt alle eerdere evaluaties op voor dezelfde categorie binnen de geselecteerde leerling
 function getCategoryEvaluationHistory(studentId, assignmentId) {
     const currentAssignment = state.assignments.find(a => a.id === assignmentId);
     const category = currentAssignment?.category;
 
     return state.evaluations.filter(e => {
         if (e.student_id !== studentId) return false;
-        if (!category) return e.assignment_id === assignmentId; // Fallback indien geen categorie
+        if (!category) return e.assignment_id === assignmentId;
         const assignment = state.assignments.find(a => a.id === e.assignment_id);
         return assignment && assignment.category === category;
     }).sort((a, b) => new Date(b.created_at || b.evaluation_date) - new Date(a.created_at || a.evaluation_date));
@@ -739,7 +735,6 @@ function renderHistory() {
         return;
     }
 
-    // Gebruik nu de categorie-brede geschiedenis
     const history = getCategoryEvaluationHistory(selectedStudentId, selectedAssignmentId);
 
     if (!history.length) {
@@ -895,7 +890,6 @@ function openAssignmentEditor() {
     
     let catInput = document.getElementById("assignmentCategory");
     if (!catInput) {
-        // Indien veld in HTML ontbreekt, dynamisch toevoegen onder de titel
         const titleInput = document.getElementById("assignmentTitle");
         if (titleInput && titleInput.parentNode) {
             const wrapper = document.createElement("div");
@@ -1194,6 +1188,7 @@ function setupStudentEvents() {
     document.getElementById("closeStudentDetail")?.addEventListener("click", () => {
         document.getElementById("studentDetail")?.classList.add("hidden");
     });
+    document.getElementById("exportClassCsvBtn")?.addEventListener("click", exportClassToCsv);
 
     document.querySelectorAll(".class-tab").forEach(tab => {
         tab.addEventListener("click", (e) => {
@@ -1266,7 +1261,6 @@ function renderClassContent() {
 
     document.getElementById("classTitle").textContent = `${cls.name} ${cls.category ? `(${cls.category})` : ''}`;
     
-    // Koppel ook aan het invoerveld indien aanwezig
     const catInput = document.getElementById("classCategoryInput");
     if (catInput) {
         catInput.value = cls.category || "";
@@ -1284,6 +1278,7 @@ function renderClassContent() {
     renderStudentsTable(students);
     renderClassScoreOverview();
 }
+
 function renderStudentsTable(students) {
     const container = document.getElementById("studentsTable");
     if (!container) return;
@@ -1329,6 +1324,23 @@ function renderStudentsTable(students) {
     });
 }
 
+function getScoreBadgeHtml(scoreObj) {
+    if (!scoreObj || scoreObj.max === 0) {
+        return `<span class="no-score">—</span>`;
+    }
+    
+    const percentage = (scoreObj.total / scoreObj.max) * 100;
+    let colorClass = "score-low";
+    
+    if (percentage >= 61) {
+        colorClass = "score-high";
+    } else if (percentage >= 51) {
+        colorClass = "score-medium";
+    }
+
+    return `<span class="score-tag ${colorClass}">${scoreObj.total} / ${scoreObj.max}</span>`;
+}
+
 function renderClassScoreOverview() {
     const container = document.getElementById("classScoresContainer");
     if (!container) return;
@@ -1348,7 +1360,7 @@ function renderClassScoreOverview() {
             <table class="score-table">
                 <thead>
                     <tr>
-                        <th>Leerling</th>
+                        <th class="sticky-col">Leerling</th>
                         ${assignments.map(a => `<th>${escapeHtml(a.title)}</th>`).join("")}
                     </tr>
                 </thead>
@@ -1356,17 +1368,77 @@ function renderClassScoreOverview() {
     `;
 
     students.forEach(student => {
-        html += `<tr><td><strong>${escapeHtml(student.name)}</strong></td>`;
+        html += `<tr><td class="sticky-col"><strong>${escapeHtml(student.name)}</strong></td>`;
         assignments.forEach(assignment => {
             const evaluation = getLatestEvaluation(student.id, assignment.id);
             const score = calculateEvaluationScore(evaluation, assignment);
-            html += `<td>${score === null ? `<span class="no-score">—</span>` : `<span class="score-value">${score.total} /${score.max}</span>`}</td>`;
+            html += `<td>${getScoreBadgeHtml(score)}</td>`;
         });
         html += `</tr>`;
     });
 
     html += `</tbody></table></div>`;
     container.innerHTML = html;
+}
+
+function exportClassToCsv() {
+    if (!selectedClassId) {
+        showToast("Selecteer eerst een klas.");
+        return;
+    }
+
+    const cls = state.classes.find(c => c.id === selectedClassId);
+    const students = state.students.filter(s => s.class_id === selectedClassId);
+    const assignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    if (!students.length || !assignments.length) {
+        showToast("Geen data om te exporteren.");
+        return;
+    }
+
+    students.sort(compareByLastName);
+
+    const headers = ["Leerling", ...assignments.map(a => `"${a.title.replace(/"/g, '""')}"`), "Totaal Behaald", "Totaal Max", "Percentage"];
+    const rows = [headers.join(";")];
+
+    students.forEach(student => {
+        let totalAchieved = 0;
+        let totalMax = 0;
+
+        const rowScores = assignments.map(assignment => {
+            const evaluation = getLatestEvaluation(student.id, assignment.id);
+            const score = calculateEvaluationScore(evaluation, assignment);
+            if (score && score.max > 0) {
+                totalAchieved += score.total;
+                totalMax += score.max;
+                return `"${score.total}/${score.max}"`;
+            }
+            return '""';
+        });
+
+        const percentageStr = totalMax > 0 ? `"${Math.round((totalAchieved / totalMax) * 100)}%"` : '""';
+        const row = [
+            `"${student.name.replace(/"/g, '""')}"`,
+            ...rowScores,
+            totalMax > 0 ? totalAchieved : '""',
+            totalMax > 0 ? totalMax : '""',
+            percentageStr
+        ];
+        rows.push(row.join(";"));
+    });
+
+    const csvContent = "\uFEFF" + rows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Puntenoverzicht_${cls ? cls.name : "Klas"}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast("CSV-bestand gedownload voor Excel.");
 }
 
 async function addStudent() {

@@ -353,7 +353,6 @@ textarea {
     margin-top: 17px;
 }
 
-/* Voortgangsbalk styling */
 .class-progress-box {
     margin-top: 15px;
     background: var(--surface-soft);
@@ -581,11 +580,19 @@ textarea {
     border-color: var(--accent);
 }
 
+/* Hersteld naar origineel groot formaat voor het evaluatiescherm */
 #totalScore {
     color: var(--accent);
     font-size: 25px;
     font-weight: 800;
     line-height: 31px;
+}
+
+/* Zorgt ervoor dat de score-tags binnen de grote totaalscore box ook mooi ogen */
+#totalScore .score-tag {
+    font-size: 20px;
+    padding: 4px 10px;
+    min-width: unset;
 }
 
 .history-section {
@@ -734,7 +741,7 @@ textarea {
     color: var(--muted);
 }
 
-/* Gedeelde Score Tags (Kleuren overal consistent) */
+/* Gedeelde Score Tags */
 .score-tag {
     display: inline-block;
     padding: 4px 8px;

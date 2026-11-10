@@ -333,7 +333,7 @@ textarea {
 
 
 /* =========================================================
-   EVALUATIE
+   EVALUATIE & VOORTGANG
 ========================================================= */
 
 .evaluation-layout {
@@ -353,10 +353,43 @@ textarea {
     margin-top: 17px;
 }
 
+/* Voortgangsbalk styling */
+.class-progress-box {
+    margin-top: 15px;
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.class-progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.class-progress-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.class-progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
 .student-filter-row {
     display: flex;
     gap: 7px;
-    margin-top: 17px;
+    margin-top: 15px;
 }
 
 .student-filter-row input {
@@ -385,7 +418,7 @@ textarea {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    max-height: calc(100vh - 350px);
+    max-height: calc(100vh - 400px);
     overflow-y: auto;
 }
 
@@ -443,6 +476,44 @@ textarea {
     gap: 25px;
     padding-bottom: 22px;
     border-bottom: 1px solid var(--border);
+}
+
+.selected-student-header-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.student-nav-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 5px;
+}
+
+.student-nav-btn {
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 800;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.student-nav-btn:hover:not(:disabled) {
+    background: var(--accent-light);
+    border-color: var(--accent);
+}
+
+.student-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
 }
 
 .selected-student h2 {
@@ -582,7 +653,7 @@ textarea {
 
 
 /* =========================================================
-   EVALUATION PARAMETERS
+   EVALUATION PARAMETERS & SCORE TAGS
 ========================================================= */
 
 .parameter {
@@ -661,6 +732,32 @@ textarea {
     font-size: 11px;
     line-height: 1.55;
     color: var(--muted);
+}
+
+/* Gedeelde Score Tags (Kleuren overal consistent) */
+.score-tag {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 11px;
+    text-align: center;
+    min-width: 55px;
+}
+
+.score-tag.score-high {
+    background-color: #e6f4ea;
+    color: #137333;
+}
+
+.score-tag.score-medium {
+    background-color: #fef7e0;
+    color: #b06000;
+}
+
+.score-tag.score-low {
+    background-color: #fce8e6;
+    color: #c5221f;
 }
 
 .comment-section {
@@ -1135,7 +1232,6 @@ textarea {
     color: var(--accent);
 }
 
-/* NIEUW: Sticky Tablekoppen en kolommen voor Puntenoverzicht */
 .score-table-wrapper {
     max-height: 500px;
     overflow: auto;
@@ -1183,30 +1279,13 @@ textarea {
     background: var(--surface-soft);
 }
 
-/* NIEUW: Automatische score-kleuring tags */
-.score-tag {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 6px;
+.score-table tfoot td {
+    position: sticky;
+    bottom: 0;
+    background: var(--surface-soft);
     font-weight: 800;
-    font-size: 11px;
-    text-align: center;
-    min-width: 55px;
-}
-
-.score-tag.score-high {
-    background-color: #e6f4ea;
-    color: #137333;
-}
-
-.score-tag.score-medium {
-    background-color: #fef7e0;
-    color: #b06000;
-}
-
-.score-tag.score-low {
-    background-color: #fce8e6;
-    color: #c5221f;
+    z-index: 8;
+    border-top: 2px solid var(--border);
 }
 
 .no-score {

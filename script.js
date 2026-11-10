@@ -150,6 +150,10 @@ function setupEvaluationEvents() {
 
     document.getElementById("timerToggle")?.addEventListener("click", toggleTimer);
     document.getElementById("timerReset")?.addEventListener("click", resetTimer);
+
+    // NIEUW: Event listeners voor Vorige / Volgende leerling knoppen
+    document.getElementById("prevStudentBtn")?.addEventListener("click", () => navigateStudent(-1));
+    document.getElementById("nextStudentBtn")?.addEventListener("click", () => navigateStudent(1));
 }
 
 function setupExportEvents() {
@@ -289,6 +293,69 @@ function executeBulkExport() {
     showToast(`Bulk export voltooid (${exportedCount} bestand(en)).`);
 }
 
+// NIEUW: Hulpfunctie om door leerlingen te navigeren binnen de actieve lijst
+function navigateStudent(direction) {
+    const listContainer = document.getElementById("studentList");
+    if (!listContainer) return;
+    
+    const studentButtons = Array.from(listContainer.querySelectorAll(".student-item"));
+    if (!studentButtons.length) return;
+
+    const currentIndex = studentButtons.findIndex(btn => btn.dataset.studentId === selectedStudentId);
+    let targetIndex = currentIndex + direction;
+
+    if (targetIndex >= 0 && targetIndex < studentButtons.length) {
+        studentButtons[targetIndex].click();
+    }
+}
+
+// NIEUW: Update de status van de Vorige/Volgende knoppen en de voortgangsbalk
+function updateClassProgressAndNavigation() {
+    const progressBox = document.getElementById("classProgressContainer");
+    const progressText = document.getElementById("classProgressText");
+    const progressBarFill = document.getElementById("classProgressBarFill");
+    const prevBtn = document.getElementById("prevStudentBtn");
+    const nextBtn = document.getElementById("nextStudentBtn");
+
+    if (!progressBox) return;
+
+    if (!selectedClassId) {
+        progressBox.classList.add("hidden");
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) nextBtn.disabled = true;
+        return;
+    }
+
+    const classStudents = state.students.filter(s => s.class_id === selectedClassId);
+    const totalStudents = classStudents.length;
+
+    if (totalStudents === 0 || !selectedAssignmentId) {
+        progressBox.classList.add("hidden");
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) nextBtn.disabled = true;
+        return;
+    }
+
+    progressBox.classList.remove("hidden");
+    const evaluatedCount = classStudents.filter(s => hasEvaluation(s.id, selectedAssignmentId)).length;
+    const percentage = Math.round((evaluatedCount / totalStudents) * 100);
+
+    progressText.textContent = `${evaluatedCount} van ${totalStudents} geëvalueerd (${percentage}%)`;
+    progressBarFill.style.width = `${percentage}%`;
+
+    const listContainer = document.getElementById("studentList");
+    if (listContainer && selectedStudentId) {
+        const studentButtons = Array.from(listContainer.querySelectorAll(".student-item"));
+        const currentIndex = studentButtons.findIndex(btn => btn.dataset.studentId === selectedStudentId);
+        
+        if (prevBtn) prevBtn.disabled = currentIndex <= 0;
+        if (nextBtn) nextBtn.disabled = currentIndex < 0 || currentIndex >= studentButtons.length - 1;
+    } else {
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) nextBtn.disabled = true;
+    }
+}
+
 function renderEvaluationStudents() {
     const container = document.getElementById("studentList");
     if (!container) return;
@@ -296,6 +363,7 @@ function renderEvaluationStudents() {
     const search = document.getElementById("studentSearch")?.value.trim().toLowerCase() || "";
     if (!search && !selectedClassId) {
         container.innerHTML = `<div class="empty-state small">Kies een klas of zoek op naam.</div>`;
+        updateClassProgressAndNavigation();
         return;
     }
 
@@ -307,6 +375,7 @@ function renderEvaluationStudents() {
 
     if (!students.length) {
         container.innerHTML = `<div class="empty-state small">Geen leerlingen gevonden.</div>`;
+        updateClassProgressAndNavigation();
         return;
     }
 
@@ -352,6 +421,8 @@ function renderEvaluationStudents() {
             renderEvaluationForm();
         });
     });
+
+    updateClassProgressAndNavigation();
 }
 
 function renderEvaluationForm() {
@@ -371,6 +442,7 @@ function renderEvaluationForm() {
         if (totalScoreEl) totalScoreEl.textContent = "—";
         container.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div><h3>Start een evaluatie</h3><p>Kies links een opdracht, klas en leerling.</p></div>`;
         renderHistory();
+        updateClassProgressAndNavigation();
         return;
     }
 
@@ -392,6 +464,25 @@ function renderEvaluationForm() {
 
     renderForm(assignment, evaluation);
     renderHistory();
+    updateClassProgressAndNavigation();
+}
+
+// Aangepaste score-kleurlogica: 50% of meer is oranje, onder 50% is rood, >=61% is groen
+function getScoreBadgeHtml(scoreObj) {
+    if (!scoreObj || scoreObj.max === 0) {
+        return `<span class="no-score">—</span>`;
+    }
+    
+    const percentage = (scoreObj.total / scoreObj.max) * 100;
+    let colorClass = "score-low"; // < 50%
+    
+    if (percentage >= 61) {
+        colorClass = "score-high"; // >= 61%
+    } else if (percentage >= 50) {
+        colorClass = "score-medium"; // 50% t.e.m. 60%
+    }
+
+    return `<span class="score-tag ${colorClass}">${scoreObj.total} / ${scoreObj.max}</span>`;
 }
 
 function renderForm(assignment, evaluation) {
@@ -587,7 +678,12 @@ function updateTotalScore() {
     const penalty = Number(document.getElementById("penaltyInput")?.value) || 0;
     const res = calculateScoreFromData(scores, excludedParams, penalty, assignment);
 
-    totalEl.textContent = res === null ? "—" : `${res.total} / ${res.max}`;
+    if (res === null) {
+        totalEl.innerHTML = "—";
+    } else {
+        // Ook in het hoofdformulier toepassen van de consistente score-tag kleuring
+        totalEl.innerHTML = getScoreBadgeHtml(res);
+    }
 }
 
 function collectFormData() {
@@ -1324,32 +1420,21 @@ function renderStudentsTable(students) {
     });
 }
 
-function getScoreBadgeHtml(scoreObj) {
-    if (!scoreObj || scoreObj.max === 0) {
-        return `<span class="no-score">—</span>`;
-    }
-    
-    const percentage = (scoreObj.total / scoreObj.max) * 100;
-    let colorClass = "score-low";
-    
-    if (percentage >= 61) {
-        colorClass = "score-high";
-    } else if (percentage >= 51) {
-        colorClass = "score-medium";
-    }
-
-    return `<span class="score-tag ${colorClass}">${scoreObj.total} / ${scoreObj.max}</span>`;
-}
-
+// Aangepast in Puntenoverzicht: Enkel opdrachten tonen waar minstens één leerling in deze klas voor beoordeeld is, inclusief kolomtotalen/gemiddelden onderaan
 function renderClassScoreOverview() {
     const container = document.getElementById("classScoresContainer");
     if (!container) return;
 
     const students = state.students.filter(s => s.class_id === selectedClassId);
-    const assignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const allAssignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-    if (!students.length || !assignments.length) {
-        container.innerHTML = `<div class="empty-state small">Geen leerlingen of opdrachten beschikbaar voor overzicht.</div>`;
+    // Filter enkel opdrachten waar minstens één leerling in deze klas voor geëvalueerd is
+    const activeAssignments = allAssignments.filter(assignment => {
+        return students.some(student => hasEvaluation(student.id, assignment.id));
+    });
+
+    if (!students.length || !activeAssignments.length) {
+        container.innerHTML = `<div class="empty-state small">Geen opdrachten met evaluaties gevonden voor deze klas.</div>`;
         return;
     }
 
@@ -1361,15 +1446,16 @@ function renderClassScoreOverview() {
                 <thead>
                     <tr>
                         <th class="sticky-col">Leerling</th>
-                        ${assignments.map(a => `<th>${escapeHtml(a.title)}</th>`).join("")}
+                        ${activeAssignments.map(a => `<th>${escapeHtml(a.title)}</th>`).join("")}
                     </tr>
                 </thead>
                 <tbody>
     `;
 
+    // Rij per leerling
     students.forEach(student => {
         html += `<tr><td class="sticky-col"><strong>${escapeHtml(student.name)}</strong></td>`;
-        assignments.forEach(assignment => {
+        activeAssignments.map(assignment => {
             const evaluation = getLatestEvaluation(student.id, assignment.id);
             const score = calculateEvaluationScore(evaluation, assignment);
             html += `<td>${getScoreBadgeHtml(score)}</td>`;
@@ -1377,7 +1463,34 @@ function renderClassScoreOverview() {
         html += `</tr>`;
     });
 
-    html += `</tbody></table></div>`;
+    // NIEUW: TFOOT met klasgemiddelden per opdracht
+    html += `</tbody><tfoot><tr><td class="sticky-col"><strong>Klasgemiddelde</strong></td>`;
+    activeAssignments.forEach(assignment => {
+        let totalPctSum = 0;
+        let countEvaluated = 0;
+
+        students.forEach(student => {
+            const evaluation = getLatestEvaluation(student.id, assignment.id);
+            const score = calculateEvaluationScore(evaluation, assignment);
+            if (score && score.max > 0) {
+                totalPctSum += (score.total / score.max) * 100;
+                countEvaluated++;
+            }
+        });
+
+        if (countEvaluated > 0) {
+            const avgPct = Math.round(totalPctSum / countEvaluated);
+            let avgColorClass = "score-low";
+            if (avgPct >= 61) avgColorClass = "score-high";
+            else if (avgPct >= 50) avgColorClass = "score-medium";
+
+            html += `<td><span class="score-tag ${avgColorClass}">${avgPct}%</span></td>`;
+        } else {
+            html += `<td><span class="no-score">—</span></td>`;
+        }
+    });
+    html += `</tr></tfoot></table></div>`;
+
     container.innerHTML = html;
 }
 
@@ -1389,7 +1502,8 @@ function exportClassToCsv() {
 
     const cls = state.classes.find(c => c.id === selectedClassId);
     const students = state.students.filter(s => s.class_id === selectedClassId);
-    const assignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const allAssignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const assignments = allAssignments.filter(assignment => students.some(student => hasEvaluation(student.id, assignment.id)));
 
     if (!students.length || !assignments.length) {
         showToast("Geen data om te exporteren.");

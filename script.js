@@ -33,7 +33,7 @@ let state = {
 };
 
 let selectedAssignmentId = null;
-let selectedClassId = null; // Kan zowel een class_id als een group_id zijn
+let selectedClassId = null;
 let selectedStudentId = null;
 let editingAssignmentId = null;
 let editingClassGroupId = null;
@@ -602,6 +602,10 @@ function renderForm(assignment, evaluation) {
     (assignment.parameters || []).forEach((parameter, index) => {
         const selected = selectedScores[parameter.id];
         const isExcluded = excludedParams.includes(parameter.id);
+        const matchedLevel = selected ? (parameter.levels || []).find(l => l.id === selected.level_id) : null;
+        const activeExplanation = selected
+            ? (selected.explanation !== undefined ? selected.explanation : (matchedLevel?.explanation || ""))
+            : "";
 
         html += `
             <div class="parameter ${isExcluded ? 'parameter-excluded' : ''}" data-parameter-id="${escapeHtml(parameter.id)}">
@@ -626,7 +630,7 @@ function renderForm(assignment, evaluation) {
                         const dotHtml = levelColor ? `<span class="level-color-dot" style="background-color: ${escapeHtml(levelColor)};"></span>` : "";
                         return `
                             <label class="level-card ${isSelected ? "selected" : ""}">
-                                <input type="radio" name="parameter-${escapeHtml(parameter.id)}" value="${escapeHtml(level.id)}" data-parameter="${escapeHtml(parameter.id)}" data-score="${escapeHtml(String(level.score))}" data-color="${escapeHtml(levelColor)}" ${isSelected ? "checked" : ""} ${isExcluded ? "disabled" : ""}>
+                                <input type="radio" name="parameter-${escapeHtml(parameter.id)}" value="${escapeHtml(level.id)}" data-parameter="${escapeHtml(parameter.id)}" data-score="${escapeHtml(String(level.score))}" data-color="${escapeHtml(levelColor)}" data-default-explanation="${escapeHtml(level.explanation || "")}" ${isSelected ? "checked" : ""} ${isExcluded ? "disabled" : ""}>
                                 <div class="level-score">
                                     <span>${escapeHtml(String(level.score))}</span>
                                     ${dotHtml}
@@ -635,6 +639,10 @@ function renderForm(assignment, evaluation) {
                             </label>
                         `;
                     }).join("") : `<div class="empty-state small">Geen niveaus ingesteld.</div>`}
+                </div>
+                <div class="parameter-explanation-edit ${(!selected || isExcluded) ? "hidden" : ""}" data-explanation-edit-for="${escapeHtml(parameter.id)}">
+                    <label>Toelichting bij deze score op de PDF (aanpasbaar voor deze leerling)</label>
+                    <textarea class="parameter-explanation-textarea" data-explanation-input-for="${escapeHtml(parameter.id)}" placeholder="Toelichting voor deze leerling...">${escapeHtml(activeExplanation)}</textarea>
                 </div>
             </div>
         `;
@@ -680,12 +688,16 @@ function renderForm(assignment, evaluation) {
             const paramBlock = container.querySelector(`[data-parameter-id="${paramId}"]`);
             const levelsContainer = paramBlock.querySelector(".levels");
             const scoreLabel = paramBlock.querySelector(`[data-score-for="${paramId}"]`);
+            const editBox = paramBlock.querySelector(`[data-explanation-edit-for="${paramId}"]`);
+            const editTextarea = paramBlock.querySelector(`[data-explanation-input-for="${paramId}"]`);
 
             if (e.target.checked) {
                 paramBlock.classList.add("parameter-excluded");
                 levelsContainer.style.opacity = "0.4";
                 levelsContainer.style.pointerEvents = "none";
                 scoreLabel.textContent = "Niet meegeteld";
+                if (editBox) editBox.classList.add("hidden");
+                if (editTextarea) editTextarea.value = "";
                 levelsContainer.querySelectorAll("input[type=radio]").forEach(r => {
                     r.checked = false;
                     r.disabled = true;
@@ -710,8 +722,18 @@ function renderForm(assignment, evaluation) {
             });
             input.closest(".level-card")?.classList.add("selected");
             applyLevelCardColors(container);
-            const scoreElement = document.querySelector(`[data-score-for="${input.dataset.parameter}"]`);
+
+            const paramId = input.dataset.parameter;
+            const scoreElement = document.querySelector(`[data-score-for="${paramId}"]`);
             if (scoreElement) scoreElement.textContent = `Score: ${input.dataset.score}`;
+
+            const editBox = container.querySelector(`[data-explanation-edit-for="${paramId}"]`);
+            const editTextarea = container.querySelector(`[data-explanation-input-for="${paramId}"]`);
+            if (editBox && editTextarea) {
+                editBox.classList.remove("hidden");
+                editTextarea.value = input.dataset.defaultExplanation || "";
+            }
+
             updateTotalScore();
         });
     });
@@ -810,12 +832,14 @@ function collectFormData() {
                 const input = document.querySelector(`input[name="parameter-${parameter.id}"]:checked`);
                 if (input) {
                     const level = parameter.levels.find(item => item.id === input.value);
+                    const customExplEl = document.querySelector(`[data-explanation-input-for="${parameter.id}"]`);
+                    const finalExplanation = customExplEl ? customExplEl.value.trim() : (level?.explanation || "");
                     if (level) {
                         scores[parameter.id] = {
                             level_id: level.id,
                             score: Number(level.score),
                             level_title: level.title || "",
-                            explanation: level.explanation,
+                            explanation: finalExplanation,
                             color: level.color || ""
                         };
                     }
@@ -2191,7 +2215,8 @@ function buildStudentPdf(evaluation, existingDoc = null) {
         }
 
         const customRgb = hexToRgb(levelColorHex);
-        const isDarkBg = customRgb ? ((0.299 * customRgb[0] + 0.587 * customRgb[1] + 0.114 * customRgb[2]) / 255) < 0.52 : false;
+        const isWhiteBadge = levelColorHex.toLowerCase() === "#ffffff";
+        const isDarkBadge = customRgb ? ((0.299 * customRgb[0] + 0.587 * customRgb[1] + 0.114 * customRgb[2]) / 255) < 0.52 : false;
 
         let achievedScoreText = isExcluded ? "Niet beoordeeld" : (scoreData ? `${scoreData.score} / ${maxParamScore}` : `— / ${maxParamScore}`);
         let explanationText = isExcluded ? "Dit criterium werd niet beoordeeld voor deze leerling." : (scoreData?.explanation || "Geen toelichting.");
@@ -2201,11 +2226,7 @@ function buildStudentPdf(evaluation, existingDoc = null) {
         const splitExplanation = doc.splitTextToSize(explanationText, 162);
         const boxHeight = Math.max(16, 10 + (splitExplanation.length * 4));
 
-        if (customRgb) {
-            doc.setFillColor(...customRgb);
-        } else {
-            doc.setFillColor(...BG_LIGHT);
-        }
+        doc.setFillColor(...BG_LIGHT);
         doc.setDrawColor(...BORDER_COLOR);
         doc.roundedRect(marginX, currentY, 170, boxHeight, 2, 2, "FD");
 
@@ -2214,33 +2235,45 @@ function buildStudentPdf(evaluation, existingDoc = null) {
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        if (isDarkBg) {
-            doc.setTextColor(255, 255, 255);
-        } else {
-            doc.setTextColor(...TEXT_MAIN);
-        }
+        doc.setTextColor(...TEXT_MAIN);
         doc.text(param.title + (isExcluded ? " (Niet beoordeeld)" : ""), marginX + 4, currentY + 6);
 
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        if (isDarkBg) {
-            doc.setTextColor(255, 255, 255);
-        } else if (customRgb) {
-            doc.setTextColor(...TEXT_MAIN);
+        doc.setFontSize(10.5);
+
+        if (customRgb && !isExcluded) {
+            const textWidth = doc.getTextWidth(achievedScoreText);
+            const badgePaddingX = 3;
+            const badgeWidth = textWidth + (badgePaddingX * 2);
+            const badgeHeight = 6;
+            const badgeRightX = 186;
+            const badgeX = badgeRightX - badgeWidth;
+            const badgeY = currentY + 1.8;
+
+            doc.setFillColor(...customRgb);
+            if (isWhiteBadge) {
+                doc.setDrawColor(180, 180, 190);
+                doc.setLineWidth(0.3);
+                doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.5, 1.5, "FD");
+            } else {
+                doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.5, 1.5, "F");
+            }
+
+            if (isDarkBadge) {
+                doc.setTextColor(255, 255, 255);
+            } else {
+                doc.setTextColor(...TEXT_MAIN);
+            }
+            doc.text(achievedScoreText, badgeRightX - badgePaddingX, currentY + 6, { align: "right" });
         } else {
+            doc.setFontSize(11);
             doc.setTextColor(...ACCENT_COLOR);
+            doc.text(achievedScoreText, 185, currentY + 6, { align: "right" });
         }
-        doc.text(achievedScoreText, 185, currentY + 6, { align: "right" });
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
-        if (isDarkBg) {
-            doc.setTextColor(240, 240, 245);
-        } else if (customRgb) {
-            doc.setTextColor(...TEXT_MAIN);
-        } else {
-            doc.setTextColor(115, 117, 130);
-        }
+        doc.setTextColor(115, 117, 130);
         doc.text(splitExplanation, marginX + 4, currentY + 12);
 
         currentY += boxHeight + 4;

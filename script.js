@@ -13,17 +13,31 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+const LEVEL_COLOR_OPTIONS = [
+    { label: "Groen", value: "#04c55c" },
+    { label: "Lichtgroen", value: "#9eee45" },
+    { label: "Geel", value: "#ffda1c" },
+    { label: "Oranje", value: "#ffb01a" },
+    { label: "Rood", value: "#ff3334" },
+    { label: "Zwart", value: "#000000" },
+    { label: "Wit", value: "#ffffff" },
+    { label: "Kleurloos", value: "" }
+];
+
 let state = {
     assignments: [],
     classes: [],
+    class_groups: [],
     students: [],
     evaluations: []
 };
 
 let selectedAssignmentId = null;
-let selectedClassId = null;
+let selectedClassId = null; // Kan zowel een class_id als een group_id zijn
 let selectedStudentId = null;
 let editingAssignmentId = null;
+let editingClassGroupId = null;
+let draftGroupClassIds = [];
 let currentEvaluationId = null;
 let isRetake = false;
 
@@ -54,7 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function loadFromFirebase() {
-    const collections = ["assignments", "classes", "students", "evaluations"];
+    const collections = ["assignments", "classes", "class_groups", "students", "evaluations"];
     const results = await Promise.all(
         collections.map(async (name) => {
             const snap = await getDocs(collection(db, name));
@@ -99,6 +113,45 @@ async function dbDelete(col, id) {
     await deleteDoc(doc(db, col, id));
 }
 
+function isGroupSelection(selectionId) {
+    if (!selectionId) return false;
+    return state.class_groups.some(g => g.id === selectionId);
+}
+
+function getStudentsForSelection(selectionId) {
+    if (!selectionId) return [];
+    const group = state.class_groups.find(g => g.id === selectionId);
+    if (group) {
+        const orderedStudents = [];
+        (group.class_ids || []).forEach(cid => {
+            const classStudents = state.students
+                .filter(s => s.class_id === cid)
+                .sort(compareByLastName);
+            orderedStudents.push(...classStudents);
+        });
+        return orderedStudents;
+    }
+    return state.students
+        .filter(s => s.class_id === selectionId)
+        .sort(compareByLastName);
+}
+
+function hexToRgb(hex) {
+    if (!hex || typeof hex !== "string") return null;
+    const clean = hex.replace("#", "").trim();
+    if (clean.length !== 6) return null;
+    const num = parseInt(clean, 16);
+    if (Number.isNaN(num)) return null;
+    return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+function getContrastTextColor(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return null;
+    const luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+    return luminance < 0.52 ? "#ffffff" : "#171821";
+}
+
 function setupNavigation() {
     document.querySelectorAll(".nav-button").forEach((button) => {
         button.addEventListener("click", () => {
@@ -140,7 +193,8 @@ function setupEvaluationEvents() {
     });
 
     document.getElementById("retakeButton")?.addEventListener("click", startRetake);
-    document.getElementById("saveEvaluation")?.addEventListener("click", saveEvaluation);
+    document.getElementById("saveEvaluation")?.addEventListener("click", () => saveEvaluation(false));
+    document.getElementById("saveAndNextEvaluation")?.addEventListener("click", () => saveEvaluation(true));
     document.getElementById("exportStudent")?.addEventListener("click", exportSelectedStudent);
     document.getElementById("exportClass")?.addEventListener("click", exportSelectedClass);
 
@@ -151,7 +205,6 @@ function setupEvaluationEvents() {
     document.getElementById("timerToggle")?.addEventListener("click", toggleTimer);
     document.getElementById("timerReset")?.addEventListener("click", resetTimer);
 
-    // NIEUW: Event listeners voor Vorige / Volgende leerling knoppen
     document.getElementById("prevStudentBtn")?.addEventListener("click", () => navigateStudent(-1));
     document.getElementById("nextStudentBtn")?.addEventListener("click", () => navigateStudent(1));
 }
@@ -171,8 +224,29 @@ function renderEvaluationSelectors() {
         sortedAssignments.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.title)} ${a.category ? `(${escapeHtml(a.category)})` : ''}</option>`).join("");
 
     const sortedClasses = [...state.classes].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    classSelect.innerHTML = `<option value="">Kies een klas...</option>` + 
-        sortedClasses.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)} ${c.category ? `(${escapeHtml(c.category)})` : ''}</option>`).join("");
+    const sortedGroups = [...state.class_groups].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+    let classOptionsHtml = `<option value="">Kies een klas of groep...</option>`;
+
+    if (sortedGroups.length) {
+        classOptionsHtml += `<optgroup label="Klasgroepen">`;
+        classOptionsHtml += sortedGroups.map(g => {
+            const classNames = (g.class_ids || [])
+                .map(cid => state.classes.find(c => c.id === cid)?.name)
+                .filter(Boolean)
+                .join(", ");
+            return `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name)}${classNames ? ` (${escapeHtml(classNames)})` : ""}</option>`;
+        }).join("");
+        classOptionsHtml += `</optgroup>`;
+    }
+
+    if (sortedClasses.length) {
+        classOptionsHtml += sortedGroups.length ? `<optgroup label="Klassen">` : "";
+        classOptionsHtml += sortedClasses.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)} ${c.category ? `(${escapeHtml(c.category)})` : ''}</option>`).join("");
+        classOptionsHtml += sortedGroups.length ? `</optgroup>` : "";
+    }
+
+    classSelect.innerHTML = classOptionsHtml;
 
     if (selectedAssignmentId) assignmentSelect.value = selectedAssignmentId;
     if (selectedClassId) classSelect.value = selectedClassId;
@@ -222,7 +296,7 @@ function executeBulkExport() {
         let countFiles = 0;
         selectedClassIds.forEach(classId => {
             const cls = state.classes.find(c => c.id === classId);
-            const classStudents = state.students.filter(s => s.class_id === classId);
+            const classStudents = state.students.filter(s => s.class_id === classId).sort(compareByLastName);
             let classDoc = null;
             let evaluatedInClass = 0;
 
@@ -252,7 +326,7 @@ function executeBulkExport() {
         return;
     }
 
-    const targetStudents = state.students.filter(s => selectedClassIds.includes(s.class_id));
+    const targetStudents = state.students.filter(s => selectedClassIds.includes(s.class_id)).sort(compareByLastName);
     if (!targetStudents.length) {
         showToast("Geen leerlingen gevonden in de geselecteerde klassen.");
         return;
@@ -293,7 +367,6 @@ function executeBulkExport() {
     showToast(`Bulk export voltooid (${exportedCount} bestand(en)).`);
 }
 
-// NIEUW: Hulpfunctie om door leerlingen te navigeren binnen de actieve lijst
 function navigateStudent(direction) {
     const listContainer = document.getElementById("studentList");
     if (!listContainer) return;
@@ -309,9 +382,9 @@ function navigateStudent(direction) {
     }
 }
 
-// NIEUW: Update de status van de Vorige/Volgende knoppen en de voortgangsbalk
 function updateClassProgressAndNavigation() {
     const progressBox = document.getElementById("classProgressContainer");
+    const progressLabel = document.getElementById("classProgressLabel");
     const progressText = document.getElementById("classProgressText");
     const progressBarFill = document.getElementById("classProgressBarFill");
     const prevBtn = document.getElementById("prevStudentBtn");
@@ -326,8 +399,8 @@ function updateClassProgressAndNavigation() {
         return;
     }
 
-    const classStudents = state.students.filter(s => s.class_id === selectedClassId);
-    const totalStudents = classStudents.length;
+    const activeStudents = getStudentsForSelection(selectedClassId);
+    const totalStudents = activeStudents.length;
 
     if (totalStudents === 0 || !selectedAssignmentId) {
         progressBox.classList.add("hidden");
@@ -337,7 +410,10 @@ function updateClassProgressAndNavigation() {
     }
 
     progressBox.classList.remove("hidden");
-    const evaluatedCount = classStudents.filter(s => hasEvaluation(s.id, selectedAssignmentId)).length;
+    if (progressLabel) {
+        progressLabel.textContent = isGroupSelection(selectedClassId) ? "Voortgang groep" : "Voortgang klas";
+    }
+    const evaluatedCount = activeStudents.filter(s => hasEvaluation(s.id, selectedAssignmentId)).length;
     const percentage = Math.round((evaluatedCount / totalStudents) * 100);
 
     progressText.textContent = `${evaluatedCount} van ${totalStudents} geëvalueerd (${percentage}%)`;
@@ -367,7 +443,14 @@ function renderEvaluationStudents() {
         return;
     }
 
-    let students = search ? state.students.filter(s => s.name.toLowerCase().includes(search)) : state.students.filter(s => s.class_id === selectedClassId);
+    const isGroup = isGroupSelection(selectedClassId);
+    let students;
+
+    if (search) {
+        students = state.students.filter(s => s.name.toLowerCase().includes(search)).sort(compareByLastName);
+    } else {
+        students = getStudentsForSelection(selectedClassId);
+    }
 
     if (filterUnevaluated && selectedAssignmentId) {
         students = students.filter(s => !hasEvaluation(s.id, selectedAssignmentId));
@@ -379,13 +462,11 @@ function renderEvaluationStudents() {
         return;
     }
 
-    students.sort(compareByLastName);
-
     container.innerHTML = students.map(student => {
         const evaluated = selectedAssignmentId && hasEvaluation(student.id, selectedAssignmentId);
         const active = student.id === selectedStudentId;
         const retakeCount = getEvaluationHistory(student.id, selectedAssignmentId).filter(e => e.attempt_number > 1).length;
-        const cls = search ? state.classes.find(c => c.id === student.class_id) : null;
+        const cls = (search || isGroup) ? state.classes.find(c => c.id === student.class_id) : null;
         const classLabel = cls ? `<span class="muted" style="font-size: 10px; margin-left: 5px;">(${escapeHtml(cls.name)})</span>` : "";
 
         return `
@@ -401,7 +482,7 @@ function renderEvaluationStudents() {
         btn.addEventListener("click", () => {
             selectedStudentId = btn.dataset.studentId;
             const student = state.students.find(s => s.id === selectedStudentId);
-            if (student && student.class_id) {
+            if (student && student.class_id && !isGroupSelection(selectedClassId)) {
                 selectedClassId = student.class_id;
                 const classSelect = document.getElementById("evaluationClass");
                 if (classSelect) classSelect.value = selectedClassId;
@@ -467,22 +548,44 @@ function renderEvaluationForm() {
     updateClassProgressAndNavigation();
 }
 
-// Aangepaste score-kleurlogica: 50% of meer is oranje, onder 50% is rood, >=61% is groen
 function getScoreBadgeHtml(scoreObj) {
     if (!scoreObj || scoreObj.max === 0) {
         return `<span class="no-score">—</span>`;
     }
     
     const percentage = (scoreObj.total / scoreObj.max) * 100;
-    let colorClass = "score-low"; // < 50%
+    let colorClass = "score-low";
     
     if (percentage >= 61) {
-        colorClass = "score-high"; // >= 61%
+        colorClass = "score-high";
     } else if (percentage >= 50) {
-        colorClass = "score-medium"; // 50% t.e.m. 60%
+        colorClass = "score-medium";
     }
 
     return `<span class="score-tag ${colorClass}">${scoreObj.total} / ${scoreObj.max}</span>`;
+}
+
+function applyLevelCardColors(container) {
+    if (!container) return;
+    container.querySelectorAll(".level-card").forEach(card => {
+        const input = card.querySelector("input");
+        const scoreEl = card.querySelector(".level-score");
+        const explEl = card.querySelector(".level-explanation");
+        const color = input?.dataset.color || "";
+
+        if (card.classList.contains("selected") && color) {
+            const textColor = getContrastTextColor(color) || "#171821";
+            card.style.backgroundColor = color;
+            card.style.borderColor = color.toLowerCase() === "#ffffff" ? "var(--accent)" : color;
+            if (scoreEl) scoreEl.style.color = textColor;
+            if (explEl) explEl.style.color = textColor;
+        } else {
+            card.style.backgroundColor = "";
+            card.style.borderColor = "";
+            if (scoreEl) scoreEl.style.color = "";
+            if (explEl) explEl.style.color = "";
+        }
+    });
 }
 
 function renderForm(assignment, evaluation) {
@@ -519,10 +622,15 @@ function renderForm(assignment, evaluation) {
                 <div class="levels" style="${isExcluded ? 'opacity: 0.4; pointer-events: none;' : ''}">
                     ${parameter.levels && parameter.levels.length ? parameter.levels.map(level => {
                         const isSelected = selected && selected.level_id === level.id;
+                        const levelColor = level.color || "";
+                        const dotHtml = levelColor ? `<span class="level-color-dot" style="background-color: ${escapeHtml(levelColor)};"></span>` : "";
                         return `
                             <label class="level-card ${isSelected ? "selected" : ""}">
-                                <input type="radio" name="parameter-${escapeHtml(parameter.id)}" value="${escapeHtml(level.id)}" data-parameter="${escapeHtml(parameter.id)}" data-score="${escapeHtml(String(level.score))}" ${isSelected ? "checked" : ""} ${isExcluded ? "disabled" : ""}>
-                                <div class="level-score">${escapeHtml(String(level.score))}</div>
+                                <input type="radio" name="parameter-${escapeHtml(parameter.id)}" value="${escapeHtml(level.id)}" data-parameter="${escapeHtml(parameter.id)}" data-score="${escapeHtml(String(level.score))}" data-color="${escapeHtml(levelColor)}" ${isSelected ? "checked" : ""} ${isExcluded ? "disabled" : ""}>
+                                <div class="level-score">
+                                    <span>${escapeHtml(String(level.score))}</span>
+                                    ${dotHtml}
+                                </div>
                                 <div class="level-explanation">${escapeHtml(level.explanation)}</div>
                             </label>
                         `;
@@ -564,6 +672,7 @@ function renderForm(assignment, evaluation) {
     `;
 
     container.innerHTML = html;
+    applyLevelCardColors(container);
 
     container.querySelectorAll(".exclude-param-checkbox").forEach(checkbox => {
         checkbox.addEventListener("change", (e) => {
@@ -589,6 +698,7 @@ function renderForm(assignment, evaluation) {
                 scoreLabel.textContent = "Niet beoordeeld";
                 levelsContainer.querySelectorAll("input[type=radio]").forEach(r => r.disabled = false);
             }
+            applyLevelCardColors(container);
             updateTotalScore();
         });
     });
@@ -599,6 +709,7 @@ function renderForm(assignment, evaluation) {
                 other.closest(".level-card")?.classList.remove("selected");
             });
             input.closest(".level-card")?.classList.add("selected");
+            applyLevelCardColors(container);
             const scoreElement = document.querySelector(`[data-score-for="${input.dataset.parameter}"]`);
             if (scoreElement) scoreElement.textContent = `Score: ${input.dataset.score}`;
             updateTotalScore();
@@ -681,7 +792,6 @@ function updateTotalScore() {
     if (res === null) {
         totalEl.innerHTML = "—";
     } else {
-        // Ook in het hoofdformulier toepassen van de consistente score-tag kleuring
         totalEl.innerHTML = getScoreBadgeHtml(res);
     }
 }
@@ -705,7 +815,8 @@ function collectFormData() {
                             level_id: level.id,
                             score: Number(level.score),
                             level_title: level.title || "",
-                            explanation: level.explanation
+                            explanation: level.explanation,
+                            color: level.color || ""
                         };
                     }
                 }
@@ -722,12 +833,21 @@ function collectFormData() {
     return { scores, excluded_parameters, comments, feedback, penalty_points };
 }
 
-async function saveEvaluation() {
+async function saveEvaluation(advanceToNext = false) {
     if (!selectedAssignmentId || !selectedStudentId) {
         showToast("Selecteer eerst een opdracht en een leerling.");
         return;
     }
 
+    const currentStudentIdBeforeSave = selectedStudentId;
+    const listContainer = document.getElementById("studentList");
+    const currentButtons = listContainer ? Array.from(listContainer.querySelectorAll(".student-item")) : [];
+    const currentIndex = currentButtons.findIndex(btn => btn.dataset.studentId === currentStudentIdBeforeSave);
+    const nextStudentId = (advanceToNext && currentIndex >= 0 && currentIndex < currentButtons.length - 1)
+        ? currentButtons[currentIndex + 1].dataset.studentId
+        : null;
+
+    const studentObj = state.students.find(s => s.id === selectedStudentId);
     const data = collectFormData();
     const previous = getEvaluationHistory(selectedStudentId, selectedAssignmentId);
     const latestExisting = getLatestEvaluation(selectedStudentId, selectedAssignmentId);
@@ -753,7 +873,7 @@ async function saveEvaluation() {
                 id: createId("evaluation_"),
                 assignment_id: selectedAssignmentId,
                 student_id: selectedStudentId,
-                class_id: selectedClassId,
+                class_id: studentObj?.class_id || selectedClassId,
                 scores: data.scores,
                 excluded_parameters: data.excluded_parameters,
                 comments: data.comments,
@@ -771,8 +891,22 @@ async function saveEvaluation() {
 
         isRetake = false;
         renderEvaluationStudents();
-        renderEvaluationForm();
-        showToast("Evaluatie opgeslagen.");
+
+        if (advanceToNext) {
+            if (nextStudentId) {
+                const nextBtn = document.querySelector(`.student-item[data-student-id="${nextStudentId}"]`);
+                if (nextBtn) {
+                    nextBtn.click();
+                    showToast("Evaluatie opgeslagen. Volgende leerling geopend.");
+                    return;
+                }
+            }
+            renderEvaluationForm();
+            showToast("Evaluatie opgeslagen. Dit was de laatste leerling in de lijst.");
+        } else {
+            renderEvaluationForm();
+            showToast("Evaluatie opgeslagen.");
+        }
     } catch (error) {
         console.error("Firebase fout:", error);
         showToast("Opslaan mislukt.");
@@ -962,10 +1096,10 @@ function createNewAssignment() {
                 id: createId("parameter_"),
                 title: "Parameter 1",
                 levels: [
-                    { id: createId("level_"), score: 4, title: "", explanation: "Uitstekend" },
-                    { id: createId("level_"), score: 3, title: "", explanation: "Goed" },
-                    { id: createId("level_"), score: 2, title: "", explanation: "Onvoldoende" },
-                    { id: createId("level_"), score: 1, title: "", explanation: "Zeer onvoldoende" }
+                    { id: createId("level_"), score: 4, title: "", explanation: "Uitstekend", color: "" },
+                    { id: createId("level_"), score: 3, title: "", explanation: "Goed", color: "" },
+                    { id: createId("level_"), score: 2, title: "", explanation: "Onvoldoende", color: "" },
+                    { id: createId("level_"), score: 1, title: "", explanation: "Zeer onvoldoende", color: "" }
                 ]
             }
         ],
@@ -1036,6 +1170,16 @@ function addCommentField() {
     renderCommentsBuilder(assignment);
 }
 
+function renderColorSwatchesHtml(currentColor) {
+    const normalizedCurrent = (currentColor || "").toLowerCase();
+    return LEVEL_COLOR_OPTIONS.map(opt => {
+        const isActive = opt.value.toLowerCase() === normalizedCurrent;
+        const bgStyle = opt.value ? `background-color: ${opt.value};` : `background-color: transparent; border-style: dashed;`;
+        const innerSymbol = opt.value === "" ? "∅" : "";
+        return `<button type="button" class="level-color-swatch ${isActive ? "active" : ""}" data-color-value="${escapeHtml(opt.value)}" title="${escapeHtml(opt.label)}" style="${bgStyle}">${innerSymbol}</button>`;
+    }).join("");
+}
+
 function renderParametersBuilder(assignment) {
     const container = document.getElementById("parametersBuilder");
     if (!container) return;
@@ -1060,6 +1204,9 @@ function renderParametersBuilder(assignment) {
                             <div class="level-number">${levelIndex + 1}</div>
                             <div class="level-score-input">
                                 <input type="number" value="${escapeHtml(String(level.score ?? ""))}" data-level-score placeholder="Score">
+                            </div>
+                            <div class="level-color-picker">
+                                ${renderColorSwatchesHtml(level.color || "")}
                             </div>
                             <div class="level-explanation-input">
                                 <input type="text" value="${escapeHtml(level.explanation || "")}" data-level-explanation placeholder="Omschrijving">
@@ -1089,6 +1236,14 @@ function renderParametersBuilder(assignment) {
 
         levelElement.querySelector("[data-level-score]").addEventListener("input", (e) => { level.score = Number(e.target.value); });
         levelElement.querySelector("[data-level-explanation]").addEventListener("input", (e) => { level.explanation = e.target.value; });
+
+        levelElement.querySelectorAll(".level-color-swatch").forEach(swatch => {
+            swatch.addEventListener("click", () => {
+                level.color = swatch.dataset.colorValue || "";
+                levelElement.querySelectorAll(".level-color-swatch").forEach(s => s.classList.remove("active"));
+                swatch.classList.add("active");
+            });
+        });
     });
 
     container.querySelectorAll("[data-add-level]").forEach(button => {
@@ -1097,7 +1252,7 @@ function renderParametersBuilder(assignment) {
             if (!parameter) return;
             const existingScores = parameter.levels.map(l => Number(l.score)).filter(s => !Number.isNaN(s));
             let newScore = existingScores.length ? Math.min(...existingScores) - 1 : 1;
-            parameter.levels.push({ id: createId("level_"), score: newScore, title: "", explanation: "" });
+            parameter.levels.push({ id: createId("level_"), score: newScore, title: "", explanation: "", color: "" });
             renderParametersBuilder(assignment);
         });
     });
@@ -1135,10 +1290,10 @@ function addParameter() {
         id: createId("parameter_"),
         title: `Parameter ${assignment.parameters.length + 1}`,
         levels: [
-            { id: createId("level_"), score: 1, title: "", explanation: "" },
-            { id: createId("level_"), score: 2, title: "", explanation: "" },
-            { id: createId("level_"), score: 3, title: "", explanation: "" },
-            { id: createId("level_"), score: 4, title: "", explanation: "" }
+            { id: createId("level_"), score: 1, title: "", explanation: "", color: "" },
+            { id: createId("level_"), score: 2, title: "", explanation: "", color: "" },
+            { id: createId("level_"), score: 3, title: "", explanation: "", color: "" },
+            { id: createId("level_"), score: 4, title: "", explanation: "", color: "" }
         ]
     });
     renderParametersBuilder(assignment);
@@ -1156,7 +1311,10 @@ async function saveAssignment() {
     const catInput = document.getElementById("assignmentCategory");
     if (catInput) assignment.category = catInput.value.trim();
 
-    assignment.parameters.forEach(p => p.levels.forEach(l => l.score = Number(l.score)));
+    assignment.parameters.forEach(p => p.levels.forEach(l => {
+        l.score = Number(l.score);
+        if (l.color === undefined) l.color = "";
+    }));
 
     try {
         if (assignment.isNew) {
@@ -1166,6 +1324,7 @@ async function saveAssignment() {
             await dbUpdate("assignments", assignment.id, assignment);
         }
         renderAssignments();
+        renderEvaluationForm();
         showToast("Opdracht opgeslagen.");
     } catch (error) {
         showToast("Opslaan mislukt.");
@@ -1277,6 +1436,10 @@ async function moveAssignment(assignmentId, direction) {
 
 function setupStudentEvents() {
     document.getElementById("newClass")?.addEventListener("click", createClass);
+    document.getElementById("newClassGroup")?.addEventListener("click", startNewClassGroup);
+    document.getElementById("saveClassGroup")?.addEventListener("click", saveClassGroup);
+    document.getElementById("deleteClassGroup")?.addEventListener("click", deleteClassGroup);
+
     document.getElementById("addStudent")?.addEventListener("click", addStudent);
     document.getElementById("editClass")?.addEventListener("click", editClass);
     document.getElementById("deleteClass")?.addEventListener("click", deleteClass);
@@ -1307,10 +1470,222 @@ async function createClass() {
         const result = await dbInsert("classes", cls);
         state.classes.push(result);
         selectedClassId = result.id;
+        editingClassGroupId = null;
         renderAll();
         showToast("Klas aangemaakt.");
     } catch (error) {
         showToast("Mislukt.");
+    }
+}
+
+function startNewClassGroup() {
+    editingClassGroupId = "NEW";
+    draftGroupClassIds = [];
+    document.getElementById("classGroupNameInput").value = "";
+    renderClassGroups();
+    renderClasses();
+    renderClassContent();
+}
+
+function openClassGroupEditor(groupId) {
+    const group = state.class_groups.find(g => g.id === groupId);
+    if (!group) return;
+    editingClassGroupId = group.id;
+    draftGroupClassIds = [...(group.class_ids || [])].filter(cid => state.classes.some(c => c.id === cid));
+    document.getElementById("classGroupNameInput").value = group.name || "";
+    renderClassGroups();
+    renderClasses();
+    renderClassContent();
+}
+
+function renderClassGroups() {
+    const container = document.getElementById("classGroupList");
+    if (!container) return;
+    if (!state.class_groups.length) {
+        container.innerHTML = `<div class="empty-state small" style="padding: 12px 5px;">Nog geen klasgroepen.</div>`;
+        return;
+    }
+    const sorted = [...state.class_groups].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    container.innerHTML = sorted.map(grp => {
+        const validIds = (grp.class_ids || []).filter(cid => state.classes.some(c => c.id === cid));
+        const studentCount = state.students.filter(s => validIds.includes(s.class_id)).length;
+        const isActive = editingClassGroupId === grp.id;
+        return `
+            <div class="class-item ${isActive ? "active" : ""}" data-group-id="${escapeHtml(grp.id)}">
+                <div class="class-item-name">${escapeHtml(grp.name)} <span class="muted" style="font-size:10px;">(${validIds.length} kl.)</span></div>
+                <div class="class-item-count">${studentCount}</div>
+            </div>
+        `;
+    }).join("");
+
+    container.querySelectorAll("[data-group-id]").forEach(item => {
+        item.addEventListener("click", () => {
+            openClassGroupEditor(item.dataset.groupId);
+        });
+    });
+}
+
+function renderClassGroupBuilder() {
+    const availableBox = document.getElementById("availableClassesForGroup");
+    const selectedBox = document.getElementById("selectedClassesForGroup");
+    const heading = document.getElementById("classGroupHeading");
+    const deleteBtn = document.getElementById("deleteClassGroup");
+    if (!availableBox || !selectedBox) return;
+
+    const existingGroup = editingClassGroupId && editingClassGroupId !== "NEW"
+        ? state.class_groups.find(g => g.id === editingClassGroupId)
+        : null;
+
+    if (heading) {
+        heading.textContent = existingGroup ? existingGroup.name : "Nieuwe klasgroep";
+    }
+    if (deleteBtn) {
+        deleteBtn.classList.toggle("hidden", !existingGroup);
+    }
+
+    const sortedAvailable = [...state.classes]
+        .filter(c => !draftGroupClassIds.includes(c.id))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+    if (!sortedAvailable.length) {
+        availableBox.innerHTML = `<div class="empty-state small">Alle klassen zijn toegevoegd.</div>`;
+    } else {
+        availableBox.innerHTML = sortedAvailable.map(cls => {
+            const count = state.students.filter(s => s.class_id === cls.id).length;
+            return `
+                <div class="group-class-row">
+                    <div class="group-class-row-info">
+                        <span>${escapeHtml(cls.name)}</span>
+                        <span class="muted" style="font-weight: 500; font-size: 11px;">(${count} lln.)</span>
+                    </div>
+                    <button type="button" class="group-mini-btn" data-add-to-group="${escapeHtml(cls.id)}">+ Toevoegen</button>
+                </div>
+            `;
+        }).join("");
+    }
+
+    if (!draftGroupClassIds.length) {
+        selectedBox.innerHTML = `<div class="empty-state small">Klik links op klassen om ze in volgorde toe te voegen.</div>`;
+    } else {
+        selectedBox.innerHTML = draftGroupClassIds.map((cid, idx) => {
+            const cls = state.classes.find(c => c.id === cid);
+            if (!cls) return "";
+            const count = state.students.filter(s => s.class_id === cls.id).length;
+            return `
+                <div class="group-class-row">
+                    <div class="group-class-row-info">
+                        <span class="group-order-badge">${idx + 1}</span>
+                        <span>${escapeHtml(cls.name)}</span>
+                        <span class="muted" style="font-weight: 500; font-size: 11px;">(${count} lln.)</span>
+                    </div>
+                    <div class="group-row-actions">
+                        <button type="button" class="group-mini-btn" data-group-move-up="${idx}" ${idx === 0 ? "disabled" : ""}>▲</button>
+                        <button type="button" class="group-mini-btn" data-group-move-down="${idx}" ${idx === draftGroupClassIds.length - 1 ? "disabled" : ""}>▼</button>
+                        <button type="button" class="group-mini-btn danger" data-remove-from-group="${escapeHtml(cid)}">×</button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    availableBox.querySelectorAll("[data-add-to-group]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const cid = btn.dataset.addToGroup;
+            if (!draftGroupClassIds.includes(cid)) {
+                draftGroupClassIds.push(cid);
+                renderClassGroupBuilder();
+            }
+        });
+    });
+
+    selectedBox.querySelectorAll("[data-group-move-up]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const idx = Number(btn.dataset.groupMoveUp);
+            if (idx > 0) {
+                [draftGroupClassIds[idx - 1], draftGroupClassIds[idx]] = [draftGroupClassIds[idx], draftGroupClassIds[idx - 1]];
+                renderClassGroupBuilder();
+            }
+        });
+    });
+
+    selectedBox.querySelectorAll("[data-group-move-down]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const idx = Number(btn.dataset.groupMoveDown);
+            if (idx < draftGroupClassIds.length - 1) {
+                [draftGroupClassIds[idx], draftGroupClassIds[idx + 1]] = [draftGroupClassIds[idx + 1], draftGroupClassIds[idx]];
+                renderClassGroupBuilder();
+            }
+        });
+    });
+
+    selectedBox.querySelectorAll("[data-remove-from-group]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            draftGroupClassIds = draftGroupClassIds.filter(id => id !== btn.dataset.removeFromGroup);
+            renderClassGroupBuilder();
+        });
+    });
+}
+
+async function saveClassGroup() {
+    const name = document.getElementById("classGroupNameInput")?.value.trim();
+    if (!name) {
+        showToast("Geef de klasgroep een naam.");
+        return;
+    }
+    if (draftGroupClassIds.length < 2) {
+        showToast("Selecteer minstens twee klassen voor een klasgroep.");
+        return;
+    }
+
+    try {
+        if (editingClassGroupId && editingClassGroupId !== "NEW") {
+            await dbUpdate("class_groups", editingClassGroupId, {
+                name,
+                class_ids: [...draftGroupClassIds]
+            });
+            const grp = state.class_groups.find(g => g.id === editingClassGroupId);
+            if (grp) {
+                grp.name = name;
+                grp.class_ids = [...draftGroupClassIds];
+            }
+            showToast("Klasgroep bijgewerkt.");
+        } else {
+            const newGroup = {
+                id: createId("group_"),
+                name,
+                class_ids: [...draftGroupClassIds],
+                created_at: new Date().toISOString()
+            };
+            const result = await dbInsert("class_groups", newGroup);
+            state.class_groups.push(result);
+            editingClassGroupId = result.id;
+            showToast("Klasgroep opgeslagen.");
+        }
+        renderAll();
+    } catch (error) {
+        console.error(error);
+        showToast("Opslaan van klasgroep mislukt.");
+    }
+}
+
+async function deleteClassGroup() {
+    if (!editingClassGroupId || editingClassGroupId === "NEW") return;
+    const grp = state.class_groups.find(g => g.id === editingClassGroupId);
+    if (!grp) return;
+    if (!confirm(`Klasgroep "${grp.name}" verwijderen?`)) return;
+
+    try {
+        await dbDelete("class_groups", grp.id);
+        state.class_groups = state.class_groups.filter(g => g.id !== grp.id);
+        if (selectedClassId === grp.id) {
+            selectedClassId = null;
+            selectedStudentId = null;
+        }
+        editingClassGroupId = null;
+        renderAll();
+        showToast("Klasgroep verwijderd.");
+    } catch (error) {
+        showToast("Verwijderen mislukt.");
     }
 }
 
@@ -1324,8 +1699,9 @@ function renderClasses() {
     const sorted = [...state.classes].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
     container.innerHTML = sorted.map(cls => {
         const count = state.students.filter(s => s.class_id === cls.id).length;
+        const isActive = !editingClassGroupId && cls.id === selectedClassId;
         return `
-            <div class="class-item ${cls.id === selectedClassId ? "active" : ""}" data-class-id="${escapeHtml(cls.id)}">
+            <div class="class-item ${isActive ? "active" : ""}" data-class-id="${escapeHtml(cls.id)}">
                 <div class="class-item-name">${escapeHtml(cls.name)} ${cls.category ? `<span class="muted" style="font-size:10px;">(${escapeHtml(cls.category)})</span>` : ''}</div>
                 <div class="class-item-count">${count}</div>
             </div>
@@ -1334,6 +1710,7 @@ function renderClasses() {
 
     container.querySelectorAll("[data-class-id]").forEach(item => {
         item.addEventListener("click", () => {
+            editingClassGroupId = null;
             selectedClassId = item.dataset.classId;
             renderAll();
         });
@@ -1343,7 +1720,18 @@ function renderClasses() {
 function renderClassContent() {
     const empty = document.getElementById("classEmpty");
     const content = document.getElementById("classContent");
-    if (!empty || !content) return;
+    const groupContent = document.getElementById("classGroupContent");
+    if (!empty || !content || !groupContent) return;
+
+    if (editingClassGroupId) {
+        empty.classList.add("hidden");
+        content.classList.add("hidden");
+        groupContent.classList.remove("hidden");
+        renderClassGroupBuilder();
+        return;
+    }
+
+    groupContent.classList.add("hidden");
 
     const cls = state.classes.find(item => item.id === selectedClassId);
     if (!cls) {
@@ -1420,7 +1808,6 @@ function renderStudentsTable(students) {
     });
 }
 
-// Aangepast in Puntenoverzicht: Enkel opdrachten tonen waar minstens één leerling in deze klas voor beoordeeld is, inclusief kolomtotalen/gemiddelden onderaan
 function renderClassScoreOverview() {
     const container = document.getElementById("classScoresContainer");
     if (!container) return;
@@ -1428,7 +1815,6 @@ function renderClassScoreOverview() {
     const students = state.students.filter(s => s.class_id === selectedClassId);
     const allAssignments = [...state.assignments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-    // Filter enkel opdrachten waar minstens één leerling in deze klas voor geëvalueerd is
     const activeAssignments = allAssignments.filter(assignment => {
         return students.some(student => hasEvaluation(student.id, assignment.id));
     });
@@ -1452,7 +1838,6 @@ function renderClassScoreOverview() {
                 <tbody>
     `;
 
-    // Rij per leerling
     students.forEach(student => {
         html += `<tr><td class="sticky-col"><strong>${escapeHtml(student.name)}</strong></td>`;
         activeAssignments.map(assignment => {
@@ -1463,7 +1848,6 @@ function renderClassScoreOverview() {
         html += `</tr>`;
     });
 
-    // NIEUW: TFOOT met klasgemiddelden per opdracht
     html += `</tbody><tfoot><tr><td class="sticky-col"><strong>Klasgemiddelde</strong></td>`;
     activeAssignments.forEach(assignment => {
         let totalPctSum = 0;
@@ -1495,7 +1879,7 @@ function renderClassScoreOverview() {
 }
 
 function exportClassToCsv() {
-    if (!selectedClassId) {
+    if (!selectedClassId || isGroupSelection(selectedClassId)) {
         showToast("Selecteer eerst een klas.");
         return;
     }
@@ -1556,7 +1940,7 @@ function exportClassToCsv() {
 }
 
 async function addStudent() {
-    if (!selectedClassId) {
+    if (!selectedClassId || isGroupSelection(selectedClassId)) {
         showToast("Selecteer eerst een klas.");
         return;
     }
@@ -1596,6 +1980,14 @@ async function deleteClass() {
     await dbDelete("classes", cls.id);
     state.classes = state.classes.filter(item => item.id !== cls.id);
     state.students = state.students.filter(s => s.class_id !== cls.id);
+
+    for (const grp of state.class_groups) {
+        if (grp.class_ids?.includes(cls.id)) {
+            grp.class_ids = grp.class_ids.filter(id => id !== cls.id);
+            await dbUpdate("class_groups", grp.id, { class_ids: grp.class_ids });
+        }
+    }
+
     selectedClassId = null;
     renderAll();
     showToast("Klas verwijderd.");
@@ -1704,12 +2096,14 @@ function exportSelectedClass() {
         showToast("Selecteer eerst een klas en een opdracht.");
         return;
     }
-    const classStudents = state.students.filter(s => s.class_id === selectedClassId);
+    const classStudents = getStudentsForSelection(selectedClassId);
+    const group = state.class_groups.find(g => g.id === selectedClassId);
     const cls = state.classes.find(c => c.id === selectedClassId);
+    const targetName = group ? group.name : (cls?.name || "");
     const assignment = state.assignments.find(a => a.id === selectedAssignmentId);
 
     if (!classStudents.length) {
-        showToast("Geen leerlingen in deze klas.");
+        showToast("Geen leerlingen in deze selectie.");
         return;
     }
 
@@ -1729,11 +2123,11 @@ function exportSelectedClass() {
     });
 
     if (!masterDoc || evaluatedCount === 0) {
-        showToast("Geen ingevulde evaluaties in deze klas.");
+        showToast("Geen ingevulde evaluaties in deze selectie.");
         return;
     }
 
-    masterDoc.save(`Klas ${cls?.name || ""} - ${assignment?.title || "Evaluaties"}.pdf`);
+    masterDoc.save(`Klas ${targetName} - ${assignment?.title || "Evaluaties"}.pdf`);
     showToast(`PDF voor ${evaluatedCount} leerling(en) gegenereerd.`);
 }
 
@@ -1790,6 +2184,15 @@ function buildStudentPdf(evaluation, existingDoc = null) {
         const scoreData = evaluation.scores ? evaluation.scores[param.id] : null;
         const maxParamScore = param.levels && param.levels.length ? Math.max(...param.levels.map(l => Number(l.score))) : 0;
 
+        let levelColorHex = "";
+        if (!isExcluded && scoreData) {
+            const matchedLevel = (param.levels || []).find(l => l.id === scoreData.level_id);
+            levelColorHex = (matchedLevel?.color !== undefined ? matchedLevel.color : scoreData.color) || "";
+        }
+
+        const customRgb = hexToRgb(levelColorHex);
+        const isDarkBg = customRgb ? ((0.299 * customRgb[0] + 0.587 * customRgb[1] + 0.114 * customRgb[2]) / 255) < 0.52 : false;
+
         let achievedScoreText = isExcluded ? "Niet beoordeeld" : (scoreData ? `${scoreData.score} / ${maxParamScore}` : `— / ${maxParamScore}`);
         let explanationText = isExcluded ? "Dit criterium werd niet beoordeeld voor deze leerling." : (scoreData?.explanation || "Geen toelichting.");
 
@@ -1798,7 +2201,11 @@ function buildStudentPdf(evaluation, existingDoc = null) {
         const splitExplanation = doc.splitTextToSize(explanationText, 162);
         const boxHeight = Math.max(16, 10 + (splitExplanation.length * 4));
 
-        doc.setFillColor(...BG_LIGHT);
+        if (customRgb) {
+            doc.setFillColor(...customRgb);
+        } else {
+            doc.setFillColor(...BG_LIGHT);
+        }
         doc.setDrawColor(...BORDER_COLOR);
         doc.roundedRect(marginX, currentY, 170, boxHeight, 2, 2, "FD");
 
@@ -1807,17 +2214,33 @@ function buildStudentPdf(evaluation, existingDoc = null) {
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        doc.setTextColor(...TEXT_MAIN);
+        if (isDarkBg) {
+            doc.setTextColor(255, 255, 255);
+        } else {
+            doc.setTextColor(...TEXT_MAIN);
+        }
         doc.text(param.title + (isExcluded ? " (Niet beoordeeld)" : ""), marginX + 4, currentY + 6);
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
-        doc.setTextColor(...ACCENT_COLOR);
+        if (isDarkBg) {
+            doc.setTextColor(255, 255, 255);
+        } else if (customRgb) {
+            doc.setTextColor(...TEXT_MAIN);
+        } else {
+            doc.setTextColor(...ACCENT_COLOR);
+        }
         doc.text(achievedScoreText, 185, currentY + 6, { align: "right" });
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
-        doc.setTextColor(115, 117, 130);
+        if (isDarkBg) {
+            doc.setTextColor(240, 240, 245);
+        } else if (customRgb) {
+            doc.setTextColor(...TEXT_MAIN);
+        } else {
+            doc.setTextColor(115, 117, 130);
+        }
         doc.text(splitExplanation, marginX + 4, currentY + 12);
 
         currentY += boxHeight + 4;
@@ -1864,6 +2287,7 @@ function buildStudentPdf(evaluation, existingDoc = null) {
 function renderAll() {
     renderAssignments();
     renderClasses();
+    renderClassGroups();
     renderEvaluationSelectors();
     renderEvaluationStudents();
     renderEvaluationForm();

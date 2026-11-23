@@ -43,15 +43,15 @@
                         <option value="">Kies een opdracht...</option>
                     </select>
 
-                    <label for="evaluationClass">Klas</label>
+                    <label for="evaluationClass">Klas of klasgroep</label>
                     <select id="evaluationClass">
                         <option value="">Kies een klas...</option>
                     </select>
 
-                    <!-- NIEUW: Visuele voortgangspercentage per klas -->
+                    <!-- Visuele voortgangspercentage per klas/klasgroep -->
                     <div id="classProgressContainer" class="class-progress-box hidden">
                         <div class="class-progress-info">
-                            <span id="classProgressLabel">Voortgang klas</span>
+                            <span id="classProgressLabel">Voortgang</span>
                             <span id="classProgressText">0 / 0</span>
                         </div>
                         <div class="class-progress-bar-bg">
@@ -120,7 +120,8 @@
 
                     <div class="bottom-actions">
                         <button type="button" id="retakeButton" class="secondary-button">Nieuwe herkansing</button>
-                        <button type="button" id="saveEvaluation" class="primary-button">Evaluatie opslaan</button>
+                        <button type="button" id="saveEvaluation" class="secondary-button">Evaluatie opslaan</button>
+                        <button type="button" id="saveAndNextEvaluation" class="primary-button">Opslaan en volgende leerling</button>
                         <button type="button" id="exportStudent" class="secondary-button">Exporteer PDF</button>
                         <button type="button" id="exportClass" class="secondary-button">Klas PDF</button>
                     </div>
@@ -176,7 +177,7 @@
                             <div class="builder-heading">
                                 <div>
                                     <h3>Beoordelingscriteria</h3>
-                                    <p class="builder-description">Stel de parameters en bijbehorende niveaus in.</p>
+                                    <p class="builder-description">Stel de parameters, bijbehorende niveaus en scorekleuren in.</p>
                                 </div>
                                 <button type="button" id="addParameter" class="secondary-button">+ Criterium</button>
                             </div>
@@ -195,20 +196,27 @@
             </div>
         </section>
 
-        <!-- KLASSEN -->
+        <!-- KLASSEN & KLASGROEPEN -->
         <section id="classes" class="page">
             <div class="students-layout">
                 <div class="card class-list">
-                    <button type="button" id="newClass" class="primary-button" style="width: 100%; margin-bottom: 15px;">+ Nieuwe klas</button>
+                    <button type="button" id="newClass" class="primary-button" style="width: 100%; margin-bottom: 12px;">+ Nieuwe klas</button>
                     <div id="classList"></div>
+
+                    <div class="sidebar-divider"></div>
+
+                    <div class="section-label" style="margin-bottom: 10px;">KLASGROEPEN</div>
+                    <button type="button" id="newClassGroup" class="secondary-button" style="width: 100%; margin-bottom: 12px;">+ Nieuwe klasgroep</button>
+                    <div id="classGroupList"></div>
                 </div>
 
                 <div class="card class-editor">
                     <div id="classEmpty" class="empty-state">
-                        <h3>Geen klas geselecteerd</h3>
-                        <p>Kies links een klas om leerlingen en overzichten te bekijken.</p>
+                        <h3>Geen klas of klasgroep geselecteerd</h3>
+                        <p>Kies links een klas om leerlingen te beheren of maak een klasgroep aan.</p>
                     </div>
 
+                    <!-- BEHEER LOSSE KLAS -->
                     <div id="classContent" class="hidden">
                         <div class="editor-header">
                             <div>
@@ -250,6 +258,42 @@
                                 </button>
                             </div>
                             <div id="classScoresContainer"></div>
+                        </div>
+                    </div>
+
+                    <!-- BEHEER KLASGROEP -->
+                    <div id="classGroupContent" class="hidden">
+                        <div class="editor-header">
+                            <div>
+                                <span class="eyebrow">KLASGROEP BEHEREN</span>
+                                <h2 id="classGroupHeading">Nieuwe klasgroep</h2>
+                                <p class="muted">Combineer meerdere klassen in een vaste volgorde.</p>
+                            </div>
+                            <div class="editor-header-actions">
+                                <button type="button" id="deleteClassGroup" class="danger-button hidden">Groep verwijderen</button>
+                            </div>
+                        </div>
+
+                        <div class="form-grid" style="margin-top: 22px;">
+                            <div class="field full">
+                                <label for="classGroupNameInput">Naam van de klasgroep</label>
+                                <input type="text" id="classGroupNameInput" placeholder="Bijv. 4HW + 4EW (Groep A)">
+                            </div>
+                        </div>
+
+                        <div class="group-builder-grid">
+                            <div>
+                                <label>1. Beschikbare klassen (klik om toe te voegen)</label>
+                                <div id="availableClassesForGroup" class="group-selection-box"></div>
+                            </div>
+                            <div>
+                                <label>2. Geselecteerde klassen & volgorde</label>
+                                <div id="selectedClassesForGroup" class="group-selection-box"></div>
+                            </div>
+                        </div>
+
+                        <div class="editor-footer">
+                            <button type="button" id="saveClassGroup" class="primary-button">Klasgroep opslaan</button>
                         </div>
                     </div>
                 </div>

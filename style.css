@@ -580,7 +580,6 @@ textarea {
     border-color: var(--accent);
 }
 
-/* Hersteld naar origineel groot formaat voor het evaluatiescherm */
 #totalScore {
     color: var(--accent);
     font-size: 25px;
@@ -588,7 +587,6 @@ textarea {
     line-height: 31px;
 }
 
-/* Zorgt ervoor dat de score-tags binnen de grote totaalscore box ook mooi ogen */
 #totalScore .score-tag {
     font-size: 20px;
     padding: 4px 10px;
@@ -660,7 +658,7 @@ textarea {
 
 
 /* =========================================================
-   EVALUATION PARAMETERS & SCORE TAGS
+   EVALUATION PARAMETERS, LEVEL COLORS & SCORE TAGS
 ========================================================= */
 
 .parameter {
@@ -708,7 +706,7 @@ textarea {
     min-height: 110px;
     background: white;
     cursor: pointer;
-    transition: border .15s, background .15s, transform .15s;
+    transition: border .15s, background .15s, transform .15s, color .15s;
 }
 
 .level-card:hover {
@@ -733,6 +731,17 @@ textarea {
     font-size: 20px;
     font-weight: 800;
     margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.level-color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
 }
 
 .level-explanation {
@@ -808,6 +817,7 @@ textarea {
 .bottom-actions {
     display: flex;
     justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 20px;
 }
@@ -999,7 +1009,7 @@ textarea {
 .level-builder {
     display: flex !important;
     align-items: center !important;
-    gap: 12px !important;
+    gap: 10px !important;
     margin-bottom: 12px;
     width: 100% !important;
     box-sizing: border-box;
@@ -1025,6 +1035,38 @@ textarea {
     text-align: center;
     font-weight: 800;
     color: var(--accent);
+}
+
+.level-color-picker {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.level-color-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--muted);
+    transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+}
+
+.level-color-swatch:hover {
+    transform: scale(1.12);
+}
+
+.level-color-swatch.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-light);
+    transform: scale(1.15);
 }
 
 .level-builder .level-title-input {
@@ -1086,7 +1128,7 @@ textarea {
 
 
 /* =========================================================
-   LEERLINGEN & STICKY TABELLEN
+   LEERLINGEN, KLASGROEPEN & STICKY TABELLEN
 ========================================================= */
 
 .students-layout {
@@ -1100,6 +1142,12 @@ textarea {
     position: sticky;
     top: 100px;
     align-self: start;
+}
+
+.sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 18px 0;
 }
 
 .class-item {
@@ -1131,6 +1179,89 @@ textarea {
 
 .class-editor {
     padding: 28px;
+}
+
+.group-builder-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 22px;
+}
+
+.group-selection-box {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-soft);
+    padding: 10px;
+    min-height: 200px;
+    max-height: 360px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.group-class-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.group-class-row-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.group-order-badge {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.group-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.group-mini-btn {
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.group-mini-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.group-mini-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.group-mini-btn.danger:hover {
+    border-color: #efd5d2;
+    color: var(--danger);
 }
 
 .student-add {
@@ -1471,6 +1602,9 @@ textarea {
         justify-content: flex-start;
         flex-wrap: wrap;
     }
+    .group-builder-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 650px) {
@@ -1508,6 +1642,9 @@ textarea {
     .levels {
         grid-auto-flow: row;
         grid-auto-columns: auto;
+    }
+    .level-builder {
+        flex-wrap: wrap !important;
     }
     .bottom-actions {
         flex-direction: column;

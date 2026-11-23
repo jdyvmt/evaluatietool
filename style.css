@@ -658,7 +658,7 @@ textarea {
 
 
 /* =========================================================
-   EVALUATION PARAMETERS, LEVEL COLORS & SCORE TAGS
+   EVALUATION PARAMETERS, LEVEL COLORS, EXPLANATION EDIT & SCORE TAGS
 ========================================================= */
 
 .parameter {
@@ -748,6 +748,30 @@ textarea {
     font-size: 11px;
     line-height: 1.55;
     color: var(--muted);
+}
+
+.parameter-explanation-edit {
+    margin-top: 10px;
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.parameter-explanation-edit label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    margin-bottom: 5px;
+    color: var(--muted);
+}
+
+.parameter-explanation-textarea {
+    min-height: 54px;
+    padding: 9px 11px;
+    font-size: 12px;
+    line-height: 1.45;
+    background: var(--surface);
 }
 
 /* Gedeelde Score Tags */
